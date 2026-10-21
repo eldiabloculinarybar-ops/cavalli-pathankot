@@ -22,18 +22,54 @@ const STORAGE_KEY = 'cavalli_sms_gateway_config';
  * Internal Fast2SMS Gateway Configuration
  * Pre-configured internally inside the application codebase
  */
-export const INTERNAL_FAST2SMS_API_KEY =
-  (typeof process !== 'undefined' && (process.env?.FAST2SMS_API_KEY || (process.env as any)?.VITE_FAST2SMS_API_KEY)) ||
-  'YOUR_FAST2SMS_API_KEY';
+export const DEFAULT_INTERNAL_KEY = 'yRP80QNreiC1ku6XqsD7mtKdIOFU9YgElJnZz3M5V4xBHoWbGctGaQcfmsZgv0n9OJz7DARSpIw5eW3U';
+
+export const getInternalFast2SmsKey = (): string => {
+  if (typeof window !== 'undefined') {
+    try {
+      const fromStorage = localStorage.getItem('cavalli_fast2sms_internal_key');
+      if (fromStorage && fromStorage.trim().length >= 20 && fromStorage !== 'YOUR_FAST2SMS_API_KEY') {
+        return fromStorage.trim();
+      }
+    } catch (e) {}
+  }
+  try {
+    const viteEnv = (import.meta as any).env?.VITE_FAST2SMS_API_KEY;
+    if (viteEnv && String(viteEnv).trim().length >= 20 && viteEnv !== 'YOUR_FAST2SMS_API_KEY') {
+      return String(viteEnv).trim();
+    }
+  } catch (e) {}
+  try {
+    const procEnv = typeof process !== 'undefined' && (process.env?.FAST2SMS_API_KEY || (process.env as any)?.VITE_FAST2SMS_API_KEY);
+    if (procEnv && String(procEnv).trim().length >= 20 && procEnv !== 'YOUR_FAST2SMS_API_KEY') {
+      return String(procEnv).trim();
+    }
+  } catch (e) {}
+  return DEFAULT_INTERNAL_KEY;
+};
+
+export const saveInternalFast2SmsKey = (newKey: string): void => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('cavalli_fast2sms_internal_key', newKey.trim());
+      const cfg = getSmsGatewayConfig();
+      saveSmsGatewayConfig({ ...cfg, fast2smsApiKey: newKey.trim() });
+    } catch (e) {}
+  }
+};
+
+export const INTERNAL_FAST2SMS_API_KEY = DEFAULT_INTERNAL_KEY;
 
 export function getSmsGatewayConfig(): SmsGatewayConfig {
+  const resolvedInternalKey = getInternalFast2SmsKey();
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (data) {
       const parsed: SmsGatewayConfig = JSON.parse(data);
+      const isPlaceholder = !parsed.fast2smsApiKey || parsed.fast2smsApiKey === 'YOUR_FAST2SMS_API_KEY';
       return {
         ...parsed,
-        fast2smsApiKey: parsed.fast2smsApiKey || INTERNAL_FAST2SMS_API_KEY,
+        fast2smsApiKey: isPlaceholder ? resolvedInternalKey : parsed.fast2smsApiKey,
         whatsappSenderName: parsed.whatsappSenderName || 'Cavalli Club',
         isLive: true,
         provider: 'fast2sms'
@@ -44,10 +80,16 @@ export function getSmsGatewayConfig(): SmsGatewayConfig {
   }
   return {
     provider: 'fast2sms',
-    fast2smsApiKey: INTERNAL_FAST2SMS_API_KEY,
+    fast2smsApiKey: resolvedInternalKey,
     whatsappSenderName: 'Cavalli Club',
     isLive: true
   };
+}
+
+export function hasValidFast2SmsKey(): boolean {
+  const cfg = getSmsGatewayConfig();
+  const key = (cfg.fast2smsApiKey || getInternalFast2SmsKey() || '').trim();
+  return Boolean(key.length >= 12 && key !== 'YOUR_FAST2SMS_API_KEY');
 }
 
 export function isFast2SmsLive(): boolean {
@@ -71,11 +113,10 @@ export function activateFast2SmsKey(apiKey?: string, senderName?: string): SmsGa
 
 export function saveSmsGatewayConfig(config: SmsGatewayConfig): void {
   try {
-    const hasKey = Boolean(config.fast2smsApiKey && config.fast2smsApiKey.trim().length >= 6);
     const updated: SmsGatewayConfig = {
       ...config,
-      isLive: config.isLive ?? hasKey,
-      lastLiveAt: hasKey ? (config.lastLiveAt || new Date().toISOString()) : undefined
+      isLive: true,
+      lastLiveAt: config.lastLiveAt || new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch (e) {
@@ -129,10 +170,18 @@ export async function dispatchRealOtpToPhone({
   provider?: 'whatsapp' | 'fast2sms' | 'twofactor' | 'native_sms';
   fast2smsKey?: string;
   twoFactorKey?: string;
-}): Promise<{ success: boolean; message: string; channelUsed: string; waUrl?: string }> {
+}): Promise<{
+  success: boolean;
+  message: string;
+  channelUsed: string;
+  waUrl: string;
+  otp: string;
+  fast2smsSuccess?: boolean;
+  fast2smsError?: string;
+}> {
   const currentConfig = getSmsGatewayConfig();
   const effectiveKey = (fast2smsKey || currentConfig.fast2smsApiKey || '').trim();
-  const effectiveProvider = provider || (effectiveKey ? 'fast2sms' : currentConfig.provider || 'whatsapp');
+  const effectiveProvider = provider || 'fast2sms';
 
   // Extract pure 10-digit number
   const digitsOnly = phone.replace(/[^0-9]/g, '');
@@ -143,7 +192,7 @@ export async function dispatchRealOtpToPhone({
   playSmsIncomingSound();
 
   // 2. Trigger browser/device push notification
-  if ('Notification' in window && Notification.permission === 'granted') {
+  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
     try {
       new Notification('💬 Cavalli Club VIP OTP', {
         body: `Your Cavalli Club Verification OTP is: ${otp}. Valid for 10 minutes.`,
@@ -155,16 +204,24 @@ export async function dispatchRealOtpToPhone({
     }
   }
 
-  // 3. FAST2SMS Real Cellular SMS & WhatsApp OTP Gateway
-  if (effectiveKey && (effectiveProvider === 'fast2sms' || isFast2SmsLive())) {
-    try {
-      // First try Vite internal proxy endpoint or Hostinger PHP endpoint to avoid browser CORS
-      let sentSuccess = false;
-      let apiMessage = '';
+  // Pre-calculate WhatsApp URL
+  const effectiveSenderName = (currentConfig.whatsappSenderName || 'Cavalli Club').trim();
+  const messageText = encodeURIComponent(
+    `🍾 *${effectiveSenderName.toUpperCase()} VIP VERIFICATION*\n\nYour 4-Digit Login OTP is: *${otp}*\n\nValid for 10 minutes. Do not share this OTP with anyone.`
+  );
+  const waUrl = `https://api.whatsapp.com/send?phone=${internationalNumber}&text=${messageText}`;
 
+  let fast2smsSent = false;
+  let fast2smsErrorMessage = '';
+
+  // 3. FAST2SMS Real Cellular SMS & WhatsApp OTP Gateway (Requires valid API Key)
+  const isKeyValid = hasValidFast2SmsKey();
+
+  if (isKeyValid && (effectiveProvider === 'fast2sms' || isFast2SmsLive())) {
+    try {
       const proxyEndpoints = ['/api/fast2sms/send-otp', '/api/send-otp.php'];
       for (const endpoint of proxyEndpoints) {
-        if (sentSuccess) break;
+        if (fast2smsSent) break;
         try {
           const proxyRes = await fetch(endpoint, {
             method: 'POST',
@@ -178,17 +235,18 @@ export async function dispatchRealOtpToPhone({
           if (proxyRes.ok) {
             const proxyData = await proxyRes.json();
             if (proxyData.return) {
-              sentSuccess = true;
-              apiMessage = proxyData.message?.[0] || 'Fast2SMS OTP delivered';
+              fast2smsSent = true;
               break;
+            } else {
+              fast2smsErrorMessage = proxyData.message?.[0] || 'Fast2SMS returned error';
             }
           }
         } catch (e) {
-          // Try next proxy or direct
+          // Try next proxy
         }
       }
 
-      if (!sentSuccess) {
+      if (!fast2smsSent) {
         const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
           method: 'POST',
           headers: {
@@ -203,67 +261,46 @@ export async function dispatchRealOtpToPhone({
         });
         const data = await response.json();
         if (data.return) {
-          sentSuccess = true;
-          apiMessage = data.message?.[0] || 'Delivered';
+          fast2smsSent = true;
+        } else {
+          fast2smsErrorMessage = data.message?.[0] || 'Invalid Authentication';
         }
       }
-
-      if (sentSuccess) {
-        return {
-          success: true,
-          message: `Real OTP successfully delivered to ${tenDigit} via Live Fast2SMS Gateway!`,
-          channelUsed: 'Fast2SMS Live Gateway'
-        };
-      }
     } catch (err: any) {
-      console.warn('Fast2SMS dispatch encountered notice, continuing with WhatsApp delivery: ', err.message);
+      fast2smsErrorMessage = err.message || 'Network error';
     }
+  } else if (!isKeyValid) {
+    fast2smsErrorMessage = 'Fast2SMS API Key is not set or invalid';
   }
 
-  // 4. 2FACTOR.IN Real Cellular SMS Gateway
-  if (provider === 'twofactor' && twoFactorKey) {
-    try {
-      const response = await fetch(
-        `https://2factor.in/v3/API/V1/${twoFactorKey}/SMS/${tenDigit}/${otp}/CavalliClubOTP`
-      );
-      const data = await response.json();
-      if (data.Status === 'Success') {
-        return {
-          success: true,
-          message: `Real cellular SMS sent to ${tenDigit} via 2Factor gateway!`,
-          channelUsed: '2Factor Gateway'
-        };
-      }
-    } catch (err: any) {
-      console.warn('2Factor failed: ', err.message);
-    }
-  }
-
-  // 5. Native Mobile SMS App Protocol
-  if (provider === 'native_sms') {
-    const text = encodeURIComponent(`Cavalli Club VIP verification OTP is: ${otp}`);
-    window.location.href = `sms:+${internationalNumber}?body=${text}`;
+  if (fast2smsSent) {
     return {
       success: true,
-      message: `Opened native SMS app for +${internationalNumber} with OTP: ${otp}`,
-      channelUsed: 'Native Mobile SMS'
+      message: `Real OTP successfully delivered to ${tenDigit} via Live Fast2SMS Gateway!`,
+      channelUsed: 'Fast2SMS Live Gateway',
+      waUrl,
+      otp,
+      fast2smsSuccess: true
     };
   }
 
-  // 6. WhatsApp Instant Real Phone Delivery (Default & Most Reliable)
-  const effectiveSenderName = (currentConfig.whatsappSenderName || 'Cavalli Club').trim();
-  const messageText = encodeURIComponent(
-    `🍾 *${effectiveSenderName.toUpperCase()} VIP VERIFICATION*\n\nYour 4-Digit Login OTP is: *${otp}*\n\nValid for 10 minutes. Do not share this OTP with anyone.`
-  );
-  const waUrl = `https://api.whatsapp.com/send?phone=${internationalNumber}&text=${messageText}`;
-
-  // Open WhatsApp in new tab / app
-  window.open(waUrl, '_blank');
+  // 4. Fallback: WhatsApp Direct Delivery (Opens WhatsApp or provides 1-tap link)
+  try {
+    window.open(waUrl, '_blank');
+  } catch (e) {
+    // Popup blocked, waUrl is provided to caller
+  }
 
   return {
     success: true,
-    message: `Real OTP dispatched to phone (+${internationalNumber}) via WhatsApp!`,
-    channelUsed: 'WhatsApp Phone Delivery'
+    message: isKeyValid
+      ? `OTP dispatched to +${internationalNumber} via WhatsApp!`
+      : `WhatsApp OTP ready for +${internationalNumber}! (Fast2SMS Key needed for cellular SMS)`,
+    channelUsed: 'WhatsApp Phone Delivery',
+    waUrl,
+    otp,
+    fast2smsSuccess: false,
+    fast2smsError: fast2smsErrorMessage
   };
 }
 

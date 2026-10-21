@@ -30,7 +30,12 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
 }) => {
   const [testPhone, setTestPhone] = useState('9876543210');
   const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{
+    text: string;
+    waUrl?: string;
+    otp?: string;
+    isSuccess?: boolean;
+  } | null>(null);
 
   const config = getSmsGatewayConfig();
 
@@ -53,10 +58,29 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
       });
       triggerConfetti('small');
       playSmsIncomingSound();
-      setTestResult(`✅ Test OTP (${testOtp}) dispatched via ${res.channelUsed}!`);
-      onShowToast(`Test OTP sent to ${testPhone}!`);
+
+      if (res.fast2smsSuccess) {
+        setTestResult({
+          text: `✅ Cellular SMS delivered to ${testPhone} via Fast2SMS (OTP: ${testOtp})!`,
+          waUrl: res.waUrl,
+          otp: testOtp,
+          isSuccess: true
+        });
+        onShowToast(`Real Cellular SMS delivered via Fast2SMS!`);
+      } else {
+        setTestResult({
+          text: `📲 WhatsApp OTP (${testOtp}) तैयार है! (Fast2SMS Key सक्रिय न होने पर WhatsApp रूट)`,
+          waUrl: res.waUrl,
+          otp: testOtp,
+          isSuccess: true
+        });
+        onShowToast(`WhatsApp Test OTP (${testOtp}) dispatched!`);
+      }
     } catch (err: any) {
-      setTestResult(`⚠️ Dispatch note: ${err.message || 'OTP triggered'}`);
+      setTestResult({
+        text: `⚠️ Dispatch status: ${err.message || 'OTP triggered'}`,
+        isSuccess: false
+      });
     } finally {
       setIsTesting(false);
     }
@@ -174,9 +198,29 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
           </div>
 
           {testResult && (
-            <p className="text-[10px] text-emerald-400 font-mono animate-fade-in truncate">
-              {testResult}
-            </p>
+            <div className="pt-1.5 space-y-1.5 animate-fade-in">
+              <p className={`text-[11px] leading-tight font-medium ${testResult.isSuccess ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {testResult.text}
+              </p>
+              {testResult.waUrl && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <a
+                    href={testResult.waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <span>📲 Open WhatsApp Test</span>
+                    <span className="opacity-70">&rarr;</span>
+                  </a>
+                  {testResult.otp && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Code: <strong className="text-amber-300">{testResult.otp}</strong>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

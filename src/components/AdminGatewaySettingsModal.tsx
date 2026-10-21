@@ -19,7 +19,10 @@ import {
   dispatchRealOtpToPhone,
   playSmsIncomingSound,
   activateFast2SmsKey,
-  isFast2SmsLive
+  isFast2SmsLive,
+  getInternalFast2SmsKey,
+  saveInternalFast2SmsKey,
+  hasValidFast2SmsKey
 } from '../utils/smsService';
 import { triggerConfetti } from './CelebrationConfetti';
 
@@ -43,6 +46,10 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
     currentConfig.whatsappSenderName || 'Cavalli Club'
   );
   const [twoFactorKey, setTwoFactorKey] = useState<string>(currentConfig.twoFactorApiKey || '');
+  const [internalFast2SmsKey, setInternalFast2SmsKeyInput] = useState<string>(
+    getInternalFast2SmsKey() !== 'YOUR_FAST2SMS_API_KEY' ? getInternalFast2SmsKey() : ''
+  );
+  const [showFast2SmsKeyInput, setShowFast2SmsKeyInput] = useState(false);
   const [testPhone, setTestPhone] = useState<string>('+91 98765 43210');
   const [testStatus, setTestStatus] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
@@ -54,8 +61,12 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
 
   const handleSave = () => {
     const finalSenderName = whatsappSenderName.trim() || 'Cavalli Club';
+    if (internalFast2SmsKey.trim()) {
+      saveInternalFast2SmsKey(internalFast2SmsKey.trim());
+    }
     saveSmsGatewayConfig({
       provider,
+      fast2smsApiKey: internalFast2SmsKey.trim() || undefined,
       twoFactorApiKey: twoFactorKey.trim(),
       whatsappSenderName: finalSenderName,
       isLive: true
@@ -226,22 +237,54 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
           </div>
 
           {/* Fast2SMS Pre-Configured Internal Status */}
-          <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/30 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold shrink-0">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+          <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/30 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-xs flex items-center gap-2">
+                    <span>Fast2SMS Gateway (अंदर से एक्टिव है)</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black">
+                      🟢 {hasValidFast2SmsKey() ? 'KEY ACTIVE' : 'WHATSAPP ACTIVE'}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-emerald-300 font-mono mt-0.5">
+                    स्टेटस (Status): <strong>{hasValidFast2SmsKey() ? 'Fast2SMS Ready' : 'WhatsApp Delivery Ready'}</strong>
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-white text-xs flex items-center gap-2">
-                  <span>Fast2SMS Gateway (अंदर से एक्टिव है)</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black">
-                    🟢 CONNECTED
-                  </span>
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Fast2SMS API Key एप्लिकेशन के अंदर सुरक्षित रूप से सेट है। एडमिन सेक्शन से अलग से Key डालने की आवश्यकता नहीं है।
+
+              <button
+                type="button"
+                onClick={() => setShowFast2SmsKeyInput(!showFast2SmsKeyInput)}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer shrink-0 ml-2"
+              >
+                {showFast2SmsKeyInput ? 'Hide Key' : '🔑 Set / Update Key'}
+              </button>
+            </div>
+
+            {showFast2SmsKeyInput && (
+              <div className="pt-2 border-t border-slate-800 space-y-1.5 animate-fade-in">
+                <label className="text-[11px] font-semibold text-slate-300 block">
+                  Fast2SMS Authorization Key (Paste Key Here):
+                </label>
+                <input
+                  type="text"
+                  value={internalFast2SmsKey}
+                  onChange={(e) => setInternalFast2SmsKeyInput(e.target.value)}
+                  placeholder="Paste your Fast2SMS API key here..."
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl text-white font-mono text-xs outline-none"
+                />
+                <p className="text-[10px] text-slate-500">
+                  की (Key) सेव करने के बाद नीचे &quot;Save Gateway Settings&quot; पर क्लिक करें।
                 </p>
               </div>
+            )}
+
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 leading-relaxed">
+              📌 <strong>Fast2SMS सेल्युलर SMS चालू करने के लिए:</strong> Fast2SMS डैशबोर्ड (fast2sms.com) में लॉगिन करके <strong>&quot;OTP SMS&quot;</strong> &rarr; <strong>&quot;KYC&quot;</strong> पर क्लिक करके अपनी वेबसाइट का लिंक वेरिफाई करें। इसके बाद SMS सीधे मोबाइल सिम पर डिलीवर होने लगेंगे। तब तक WhatsApp OTP 100% सुचारू रूप से कार्य कर रहा है।
             </div>
           </div>
 

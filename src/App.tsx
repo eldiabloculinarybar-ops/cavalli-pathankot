@@ -125,7 +125,9 @@ export default function App() {
 
   // Auth Handlers - Admin
   const handleAdminLoginSuccess = (email: string, name: string) => {
+    setLoggedInCustomer(null);
     setIsAdminLoggedIn(true);
+    setPortalMode('admin');
     setAdminEmail(email);
     setAdminName(name);
     saveAdminSession({ isLoggedIn: true, email, name });
@@ -140,6 +142,10 @@ export default function App() {
 
   // Auth Handlers - Customer
   const handleCustomerLoginSuccess = (customer: Customer) => {
+    setIsAdminLoggedIn(false);
+    clearAdminSession();
+    setPortalMode('customer');
+
     // Save customer if newly registered
     setCustomers((prev) => {
       const exists = prev.some((c) => c.id === customer.id);
@@ -157,6 +163,7 @@ export default function App() {
     setLoggedInCustomer(null);
     showToast('Customer logged out.');
   };
+
 
   // Customer requests a 1-Month (₹500) or 3-Month (₹1000) subscription plan
   const handleCustomerUpdateSubscription = (customerId: string, planId: SubscriptionTierId) => {
@@ -387,219 +394,220 @@ export default function App() {
   // -------------------------------------------------------------
   // RENDER CUSTOMER PORTAL FLOW
   // -------------------------------------------------------------
-  if (portalMode === 'customer') {
-    if (loggedInCustomer) {
-      return (
-        <>
-          {toastMessage && (
-            <div className="fixed bottom-5 right-5 z-50 bg-slate-900 border border-emerald-500/50 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 text-xs text-white animate-fade-in ring-1 ring-emerald-500/30">
-              <span className="text-base">🎉</span>
-              <span className="font-medium">{toastMessage}</span>
-            </div>
-          )}
-          <CustomerPortal
-            customer={loggedInCustomer}
-            onUpdateSubscriptionRequest={handleCustomerUpdateSubscription}
-            onLogout={handleCustomerLogout}
-            onSwitchToAdmin={() => setPortalMode('admin')}
-          />
-        </>
-      );
-    }
-
+  if (loggedInCustomer) {
     return (
-      <CustomerOtpLogin
-        customers={customers}
-        onCustomerLoginSuccess={handleCustomerLoginSuccess}
-        onSwitchToAdmin={() => setPortalMode('admin')}
-      />
-    );
-  }
-
-  // -------------------------------------------------------------
-  // RENDER ADMIN PORTAL FLOW
-  // -------------------------------------------------------------
-  if (!isAdminLoggedIn) {
-    return (
-      <AdminLogin
-        onLoginSuccess={handleAdminLoginSuccess}
-        onSwitchToCustomer={() => setPortalMode('customer')}
-      />
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 border border-rose-500/50 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 text-xs text-white animate-fade-in ring-1 ring-rose-500/30">
-          <span className="text-base">🎉</span>
-          <span className="font-medium">{toastMessage}</span>
-        </div>
-      )}
-
-      {/* Admin Navbar */}
-      <Navbar
-        adminEmail={adminEmail}
-        adminName={adminName}
-        onLogout={handleAdminLogout}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onAddNewCustomer={handleAddNewCustomer}
-        onSwitchToCustomerPortal={() => setPortalMode('customer')}
-        onOpenGatewaySettings={() => setIsGatewayModalOpen(true)}
-        onOpenHostingerModal={() => setIsHostingerModalOpen(true)}
-        todayCount={todayBirthdays.length}
-        pendingApprovalsCount={pendingApprovalsCount}
-        autoSendEnabled={automationSettings.autoSendEnabled}
-      />
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Fast2SMS API Key & Live WhatsApp OTP Service Bar (Exclusively Visible to Admin) */}
-        <AdminFast2SmsBar
-          onShowToast={showToast}
-          onOpenAdvancedModal={() => setIsGatewayModalOpen(true)}
-          onOpenHostingerModal={() => setIsHostingerModalOpen(true)}
-        />
-
-        {/* Top KPI Stats Overview */}
-        <StatsOverview
-          customers={customers}
-          onTriggerDailyAutomation={() => handleSendAllToday(todayBirthdays)}
-          isAutoRunning={isAutoRunning}
-          onFilterThisMonth={() => setActiveTab('monthwise')}
-          onAddNewCustomer={handleAddNewCustomer}
-          onNavigateApprovals={() => setActiveTab('approvals')}
-          onOpenSendGreeting={handleOpenSendEmail}
-          onShowToast={showToast}
-        />
-
-        {/* Today's Special Celebration Highlight Banner */}
-        <TodayCelebrations
-          todayBirthdays={todayBirthdays}
-          onOpenSendWhatsApp={handleOpenSendEmail}
-          onSendAllToday={handleSendAllToday}
-        />
-
-        {/* Automated Dispatch Scheduler Engine Control */}
-        <AutomationSchedulerControl
-          customers={customers}
-          templates={templates}
-          autoSendEnabled={automationSettings.autoSendEnabled}
-          onToggleAutoSend={handleToggleAutoSend}
-          onBatchLogSentEmails={handleBatchLogSentEmails}
-        />
-
-        {/* Main View Tabs */}
-        {activeTab === 'monthwise' && (
-          <MonthwiseView
-            customers={customers}
-            onOpenSendWhatsApp={handleOpenSendEmail}
-            onEditCustomer={handleEditCustomer}
-            onDeleteCustomer={handleDeleteCustomer}
-            onAddNewCustomer={handleAddNewCustomer}
-          />
-        )}
-
-        {activeTab === 'directory' && (
-          <CustomerListTable
-            customers={customers}
-            onOpenSendWhatsApp={handleOpenSendEmail}
-            onEditCustomer={handleEditCustomer}
-            onDeleteCustomer={handleDeleteCustomer}
-            onAddNewCustomer={handleAddNewCustomer}
-          />
-        )}
-
-        {activeTab === 'approvals' && (
-          <AdminApprovalsView
-            customers={customers}
-            onApproveSubscription={handleApproveSubscription}
-            onRejectSubscription={handleRejectSubscription}
-            onViewAsCustomer={handleViewAsCustomer}
-          />
-        )}
-
-        {activeTab === 'templates' && (
-          <EmailTemplatesModal
-            templates={templates}
-            onSaveTemplates={(newTemplates) => {
-              setTemplates(newTemplates);
-              showToast('Email templates updated successfully!');
-            }}
-          />
-        )}
-
-        {activeTab === 'logs' && (
-          <AutomationLogsModal
-            logs={emailLogs}
-            onClearLogs={() => {
-              if (window.confirm('Are you sure you want to clear all sent email logs?')) {
-                setEmailLogs([]);
-                showToast('Email logs cleared.');
-              }
-            }}
-          />
-        )}
-      </main>
-
-      {/* Customer Add/Edit Modal (2-Step: Info -> Pick Subscription Tier) */}
-      <CustomerModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSaveCustomer={handleSaveCustomer}
-        initialCustomer={customerModalInitial}
-        defaultStep={customerModalStep}
-      />
-
-      {/* Email Wish Live Preview & Sender Modal */}
-      <EmailAutomationModal
-        isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
-        customer={emailModalCustomer}
-        templates={templates}
-        onLogSentEmail={handleLogSentEmail}
-        storeName={automationSettings.storeName}
-        senderEmail={automationSettings.senderEmail}
-      />
-
-      {/* Admin SMS Gateway Configuration Modal (Restricted Only to Admin) */}
-      <AdminGatewaySettingsModal
-        isOpen={isGatewayModalOpen}
-        onClose={() => setIsGatewayModalOpen(false)}
-        onShowToast={showToast}
-      />
-
-      {/* Hostinger Deployment Guide Modal */}
-      <HostingerDeployModal
-        isOpen={isHostingerModalOpen}
-        onClose={() => setIsHostingerModalOpen(false)}
-        onShowToast={showToast}
-      />
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>
-            &copy; {new Date().getFullYear()} Cavalli Club &bull; VIP Birthday &amp; Subscription Portal
-          </p>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsHostingerModalOpen(true)}
-              className="text-purple-400 hover:text-purple-300 font-semibold underline cursor-pointer flex items-center gap-1"
-            >
-              <span>🚀 Deploy to Hostinger Guide</span>
-            </button>
-            <button
-              onClick={() => setPortalMode(portalMode === 'admin' ? 'customer' : 'admin')}
-              className="text-emerald-400 hover:text-emerald-300 font-semibold underline cursor-pointer"
-            >
-              {portalMode === 'admin' ? 'Switch to WhatsApp Login OTP &rarr;' : 'Switch to Admin Portal &rarr;'}
-            </button>
+      <>
+        {toastMessage && (
+          <div className="fixed bottom-5 right-5 z-50 bg-slate-900 border border-emerald-500/50 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 text-xs text-white animate-fade-in ring-1 ring-emerald-500/30">
+            <span className="text-base">🎉</span>
+            <span className="font-medium">{toastMessage}</span>
           </div>
-        </div>
-      </footer>
-    </div>
+        )}
+        <CustomerPortal
+          customer={loggedInCustomer}
+          onUpdateSubscriptionRequest={handleCustomerUpdateSubscription}
+          onLogout={handleCustomerLogout}
+          onSwitchToAdmin={() => {
+            setLoggedInCustomer(null);
+            setPortalMode('admin');
+          }}
+        />
+      </>
+    );
+  }
+
+
+  // 1. If Admin is authenticated -> Render Admin Management Portal
+  if (isAdminLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
+        {/* Toast Alert */}
+        {toastMessage && (
+          <div className="fixed bottom-5 right-5 z-50 bg-slate-900 border border-rose-500/50 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 text-xs text-white animate-fade-in ring-1 ring-rose-500/30">
+            <span className="text-base">🎉</span>
+            <span className="font-medium">{toastMessage}</span>
+          </div>
+        )}
+
+        {/* Admin Navbar */}
+        <Navbar
+          adminEmail={adminEmail}
+          adminName={adminName}
+          onLogout={handleAdminLogout}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onAddNewCustomer={handleAddNewCustomer}
+          onSwitchToCustomerPortal={() => {
+            if (customers.length > 0) {
+              handleViewAsCustomer(customers[0]);
+            } else {
+              showToast('No customers available for preview');
+            }
+          }}
+          onOpenGatewaySettings={() => setIsGatewayModalOpen(true)}
+          onOpenHostingerModal={() => setIsHostingerModalOpen(true)}
+          todayCount={todayBirthdays.length}
+          pendingApprovalsCount={pendingApprovalsCount}
+          autoSendEnabled={automationSettings.autoSendEnabled}
+        />
+
+        {/* Main Container */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Fast2SMS API Key & Live WhatsApp OTP Service Bar (Exclusively Visible to Admin) */}
+          <AdminFast2SmsBar
+            onShowToast={showToast}
+            onOpenAdvancedModal={() => setIsGatewayModalOpen(true)}
+            onOpenHostingerModal={() => setIsHostingerModalOpen(true)}
+          />
+
+          {/* Top KPI Stats Overview */}
+          <StatsOverview
+            customers={customers}
+            onTriggerDailyAutomation={() => handleSendAllToday(todayBirthdays)}
+            isAutoRunning={isAutoRunning}
+            onFilterThisMonth={() => setActiveTab('monthwise')}
+            onAddNewCustomer={handleAddNewCustomer}
+            onNavigateApprovals={() => setActiveTab('approvals')}
+            onOpenSendGreeting={handleOpenSendEmail}
+            onShowToast={showToast}
+          />
+
+          {/* Today's Special Celebration Highlight Banner */}
+          <TodayCelebrations
+            todayBirthdays={todayBirthdays}
+            onOpenSendWhatsApp={handleOpenSendEmail}
+            onSendAllToday={handleSendAllToday}
+          />
+
+          {/* Automated Dispatch Scheduler Engine Control */}
+          <AutomationSchedulerControl
+            customers={customers}
+            templates={templates}
+            autoSendEnabled={automationSettings.autoSendEnabled}
+            onToggleAutoSend={handleToggleAutoSend}
+            onBatchLogSentEmails={handleBatchLogSentEmails}
+          />
+
+          {/* Main View Tabs */}
+          {activeTab === 'monthwise' && (
+            <MonthwiseView
+              customers={customers}
+              onOpenSendWhatsApp={handleOpenSendEmail}
+              onEditCustomer={handleEditCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+              onAddNewCustomer={handleAddNewCustomer}
+            />
+          )}
+
+          {activeTab === 'directory' && (
+            <CustomerListTable
+              customers={customers}
+              onOpenSendWhatsApp={handleOpenSendEmail}
+              onEditCustomer={handleEditCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+              onAddNewCustomer={handleAddNewCustomer}
+            />
+          )}
+
+          {activeTab === 'approvals' && (
+            <AdminApprovalsView
+              customers={customers}
+              onApproveSubscription={handleApproveSubscription}
+              onRejectSubscription={handleRejectSubscription}
+              onViewAsCustomer={handleViewAsCustomer}
+            />
+          )}
+
+          {activeTab === 'templates' && (
+            <EmailTemplatesModal
+              templates={templates}
+              onSaveTemplates={(newTemplates) => {
+                setTemplates(newTemplates);
+                showToast('Email templates updated successfully!');
+              }}
+            />
+          )}
+
+          {activeTab === 'logs' && (
+            <AutomationLogsModal
+              logs={emailLogs}
+              onClearLogs={() => {
+                if (window.confirm('Are you sure you want to clear all sent email logs?')) {
+                  setEmailLogs([]);
+                  showToast('Email logs cleared.');
+                }
+              }}
+            />
+          )}
+        </main>
+
+        {/* Modals */}
+        <CustomerModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSaveCustomer={handleSaveCustomer}
+          initialCustomer={customerModalInitial}
+          defaultStep={customerModalStep}
+        />
+
+        <EmailAutomationModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          customer={emailModalCustomer}
+          templates={templates}
+          onLogSentEmail={handleLogSentEmail}
+          storeName={automationSettings.storeName}
+          senderEmail={automationSettings.senderEmail}
+        />
+
+        <AdminGatewaySettingsModal
+          isOpen={isGatewayModalOpen}
+          onClose={() => setIsGatewayModalOpen(false)}
+          onShowToast={showToast}
+        />
+
+        <HostingerDeployModal
+          isOpen={isHostingerModalOpen}
+          onClose={() => setIsHostingerModalOpen(false)}
+          onShowToast={showToast}
+        />
+
+        {/* Footer */}
+        <footer className="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>
+              &copy; {new Date().getFullYear()} Cavalli Club &bull; VIP Birthday &amp; Subscription Portal
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsHostingerModalOpen(true)}
+                className="text-purple-400 hover:text-purple-300 font-semibold underline cursor-pointer flex items-center gap-1"
+              >
+                <span>🚀 Deploy to Hostinger Guide</span>
+              </button>
+              <button
+                onClick={handleAdminLogout}
+                className="text-emerald-400 hover:text-emerald-300 font-semibold underline cursor-pointer"
+              >
+                Exit Admin Portal &rarr;
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // 2. FRONT PAGE: Unified Fast2SMS Cellular OTP Login for Both Admin & Customer!
+  return (
+    <CustomerOtpLogin
+      customers={customers}
+      adminPhone="9781395857"
+      onAdminLoginSuccess={(phoneOrEmail, name) => {
+        handleAdminLoginSuccess(phoneOrEmail, name);
+      }}
+      onCustomerLoginSuccess={handleCustomerLoginSuccess}
+    />
   );
 }
+

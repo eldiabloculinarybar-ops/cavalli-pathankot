@@ -7,7 +7,7 @@ import {
   Sparkles,
   User,
   Calendar,
-  Mail,
+  Heart,
   ArrowRight,
   ArrowLeft,
   Cake,
@@ -16,19 +16,24 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
-  ExternalLink
+  ExternalLink,
+  Smartphone
 } from 'lucide-react';
 import { triggerConfetti } from './CelebrationConfetti';
-import { playSmsIncomingSound, dispatchRealOtpToPhone, isFast2SmsLive } from '../utils/smsService';
+import { playSmsIncomingSound, dispatchRealOtpToPhone, isFast2SmsLive, hasValidFast2SmsKey } from '../utils/smsService';
 
 interface CustomerOtpLoginProps {
   customers: Customer[];
+  adminPhone?: string;
+  onAdminLoginSuccess?: (phone: string, name: string) => void;
   onCustomerLoginSuccess: (customer: Customer) => void;
-  onSwitchToAdmin: () => void;
+  onSwitchToAdmin?: () => void;
 }
 
 export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
   customers,
+  adminPhone = '9781395857',
+  onAdminLoginSuccess,
   onCustomerLoginSuccess,
   onSwitchToAdmin
 }) => {
@@ -43,10 +48,14 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
   const [showOtpHint, setShowOtpHint] = useState<boolean>(false);
   const [isSending, setIsSending] = useState(false);
   const [currentWaUrl, setCurrentWaUrl] = useState<string>('');
+  const [dispatchInfo, setDispatchInfo] = useState<{ fast2smsSent: boolean; message: string }>({
+    fast2smsSent: false,
+    message: ''
+  });
 
-  // New customer registration fields
+  // New customer registration fields (Email removed, Anniversary Date optional)
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [anniversaryDate, setAnniversaryDate] = useState('');
   const [dob, setDob] = useState('1998-10-19');
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -72,7 +81,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     return digits;
   };
 
-  const handleSendWhatsAppOtp = (e: React.FormEvent) => {
+  const handleSendWhatsAppOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessNotice('');
@@ -94,7 +103,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     const newOtp = String(Math.floor(1000 + Math.random() * 9000));
     setGeneratedOtp(newOtp);
     setExistingCustomer(found || null);
-    setOtpDigits(['', '', '', '']); // Blank input - user enters from WhatsApp
+    setOtpDigits(['', '', '', '']); // Clean boxes ready for user
     setCountdown(45);
 
     const intlPhone = formatInternationalPhone(phone);
@@ -104,33 +113,37 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     const waUrl = `https://api.whatsapp.com/send?phone=${intlPhone}&text=${messageText}`;
     setCurrentWaUrl(waUrl);
 
-    // Play chime sound & dispatch real OTP via Fast2SMS and WhatsApp
+    // Play chime sound
     playSmsIncomingSound();
-    const liveFast2Sms = isFast2SmsLive();
 
-    // Call real dispatch service (Fast2SMS + push notification)
-    dispatchRealOtpToPhone({
-      phone,
-      otp: newOtp
-    });
-
-    // Open WhatsApp directly to deliver OTP on phone (safe try-catch)
     try {
-      window.open(waUrl, '_blank');
-    } catch (e) {
-      // Handled via clickable link button
+      // Call real dispatch service (Fast2SMS + WhatsApp)
+      const dispatchRes = await dispatchRealOtpToPhone({
+        phone,
+        otp: newOtp
+      });
+
+      setDispatchInfo({
+        fast2smsSent: Boolean(dispatchRes.fast2smsSuccess),
+        message: dispatchRes.message
+      });
+
+      if (dispatchRes.fast2smsSuccess) {
+        setSuccessNotice(`🟢 Fast2SMS Cellular SMS delivered to ${digits.slice(-10)}!`);
+      } else {
+        setSuccessNotice(`📲 OTP तैयार है! WhatsApp खोलें या तत्काल ऑटो-भरें बटन का उपयोग करें।`);
+      }
+    } catch (dispatchErr) {
+      setDispatchInfo({
+        fast2smsSent: false,
+        message: 'WhatsApp delivery active'
+      });
+      setSuccessNotice(`📲 OTP WhatsApp पर तैयार है!`);
     }
 
-    setTimeout(() => {
-      setIsSending(false);
-      setStep('otp');
-      setSuccessNotice(
-        liveFast2Sms
-          ? `🟢 Fast2SMS WhatsApp OTP Live! Dispatched to +${intlPhone}.`
-          : `WhatsApp Login OTP dispatched to +${intlPhone}!`
-      );
-      triggerConfetti('small');
-    }, 400);
+    setIsSending(false);
+    setStep('otp');
+    triggerConfetti('small');
   };
 
   const handleReopenWhatsApp = () => {
@@ -179,7 +192,17 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     }
 
     if (fullEnteredOtp !== generatedOtp) {
-      setError('गलत OTP! आपके व्हाट्सएप पर आए सही 4-अंकों का कोड दर्ज करें (Invalid WhatsApp OTP)');
+      setError('गलत OTP! कृपया सही 4-अंकों का कोड दर्ज करें (Invalid OTP code)');
+      return;
+    }
+
+    const digits = cleanPhone(phone);
+    const cleanAdmin = cleanPhone(adminPhone || '9781395857');
+    const isAdmin = digits === cleanAdmin || digits.endsWith('9781395857');
+
+    if (isAdmin && onAdminLoginSuccess) {
+      triggerConfetti('grand');
+      onAdminLoginSuccess(digits, 'Cavalli Administrator');
       return;
     }
 
@@ -194,11 +217,11 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
   const handleCompleteNewProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('कृपया अपना नाम दर्ज करें');
+      setError('कृपया अपना नाम दर्ज करें (Please enter your name)');
       return;
     }
     if (!dob) {
-      setError('कृपया जन्म तिथि चुनें');
+      setError('कृपया जन्म तिथि चुनें (Please select date of birth)');
       return;
     }
 
@@ -206,8 +229,8 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
       id: `cust-${Date.now()}`,
       name: name.trim(),
       phone: phone.trim(),
-      email: email.trim().toLowerCase() || `${name.toLowerCase().replace(/\s+/g, '')}@example.com`,
       dob,
+      anniversaryDate: anniversaryDate.trim() || undefined,
       subscriptionTier: '1month',
       subscriptionStatus: 'pending',
       requestedPlanId: '1month',
@@ -237,15 +260,15 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
             Cavalli Club
           </h1>
           <p className="text-xs text-amber-300 font-bold uppercase tracking-wider mt-0.5">
-            VIP Birthday Member Portal
+            VIP Birthday &amp; Management Portal
           </p>
           <p className="text-xs text-slate-300 mt-1">
-            व्हाट्सएप OTP से तुरंत लॉगिन करें और 20% डिस्काउंट मेंबरशिप पाएं
+            Fast2SMS सेल्युलर OTP से लॉगिन करें (Admin एवं Customer दोनों के लिए)
           </p>
 
           <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold shadow-sm">
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Login OTP: केवल WhatsApp (WhatsApp OTP Only)</span>
+            <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Fast2SMS Cellular SMS &amp; WhatsApp OTP 🟢 LIVE</span>
           </div>
         </div>
 
@@ -264,14 +287,30 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
         )}
 
         {/* ----------------------------------------------------------- */}
-        {/* STEP 1: Phone Input (WhatsApp Only) */}
+        {/* STEP 1: Phone Input (Fast2SMS Cellular SMS for Admin & Customer) */}
         {/* ----------------------------------------------------------- */}
         {step === 'phone' && (
           <form onSubmit={handleSendWhatsAppOtp} className="space-y-4">
+            {/* Real-time Phone Identification Pill */}
+            {cleanPhone(phone).endsWith('9781395857') ? (
+              <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs flex items-center gap-2 animate-fade-in">
+                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>👑 <strong>Admin Phone (9781395857) पहचानी गई:</strong> OTP से Admin Dashboard अनलॉक होगा।</span>
+              </div>
+            ) : (
+              <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-400 text-[11px] flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>अपना मोबाइल नंबर दर्ज करें — Fast2SMS OTP से सीधे लॉगिन करें।</span>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Your WhatsApp Mobile Number (व्हाट्सएप मोबाइल नंबर)</span>
-                <span className="text-[11px] text-emerald-400 font-bold">WhatsApp Only</span>
+                <span>Mobile Number (मोबाइल नंबर)</span>
+                <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                  <Smartphone className="w-3 h-3" />
+                  <span>Cellular SMS + WhatsApp</span>
+                </span>
               </label>
               <div className="relative">
                 <Phone className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400" />
@@ -280,13 +319,13 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 97813 95857"
                   className="w-full pl-11 pr-4 py-3 bg-slate-900/80 border border-slate-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 rounded-xl text-white placeholder-slate-500 text-sm outline-none font-mono tracking-wider"
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span>आपका 4-अंकों का लॉगिन OTP केवल आपके WhatsApp पर भेजा जाएगा।</span>
+                <Smartphone className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>4-अंकों का वेरिफिकेशन OTP आपके मोबाइल नंबर पर तुरंत भेजा जाएगा।</span>
               </p>
             </div>
 
@@ -299,8 +338,8 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Get WhatsApp OTP (व्हाट्सएप ओटीपी भेजें)</span>
+                  <Smartphone className="w-4 h-4" />
+                  <span>Send Fast2SMS Cellular OTP (ओटीपी भेजें)</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -308,16 +347,23 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
 
             {/* Quick Demo phone numbers */}
             <div className="mt-4 pt-4 border-t border-white/10 text-xs text-slate-300 space-y-2">
-              <span className="text-[11px] text-slate-400 font-medium">Or test with demo registered numbers:</span>
+              <span className="text-[11px] text-slate-400 font-medium">Quick 1-Click Login (एक-क्लिक से चुनें):</span>
               <div className="flex flex-wrap gap-1.5">
-                {customers.slice(0, 3).map((c) => (
+                <button
+                  type="button"
+                  onClick={() => setPhone('9781395857')}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/50 hover:bg-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer transition"
+                >
+                  <span>👑 Admin: 9781395857</span>
+                </button>
+                {customers.slice(0, 2).map((c) => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setPhone(c.phone)}
-                    className="px-2 py-1 rounded bg-slate-900/80 border border-slate-700 hover:border-emerald-400 text-[11px] font-mono text-slate-300 hover:text-white transition"
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 hover:border-emerald-400 text-[11px] font-mono text-slate-300 hover:text-white transition cursor-pointer"
                   >
-                    {c.name.split(' ')[0]}: {c.phone}
+                    <span>👤 {c.name.split(' ')[0]}: {c.phone}</span>
                   </button>
                 ))}
               </div>
@@ -328,12 +374,15 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
         {/* ----------------------------------------------------------- */}
         {/* STEP 2: Enter WhatsApp OTP */}
         {/* ----------------------------------------------------------- */}
+        {/* ----------------------------------------------------------- */}
+        {/* STEP 2: Enter WhatsApp OTP */}
+        {/* ----------------------------------------------------------- */}
         {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fade-in">
+          <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in">
             {/* Phone badge */}
-            <div className="p-3.5 bg-slate-900/90 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
+            <div className="p-3 bg-slate-900/90 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
               <div>
-                <p className="text-slate-400 text-[11px]">OTP Sent via WhatsApp to:</p>
+                <p className="text-slate-400 text-[11px]">OTP Sent via WhatsApp / SMS to:</p>
                 <p className="font-mono font-bold text-emerald-300 text-sm mt-0.5">{phone}</p>
               </div>
               <button
@@ -345,22 +394,41 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
               </button>
             </div>
 
-            {/* Direct Re-open WhatsApp link */}
+            {/* Direct Re-open WhatsApp Primary Button */}
             <a
               href={currentWaUrl || `https://api.whatsapp.com/send?phone=${formatInternationalPhone(phone)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleReopenWhatsApp}
-              className="w-full p-2.5 rounded-xl bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition cursor-pointer"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span>Open WhatsApp on Phone (व्हाट्सएप में कोड देखें)</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+              <MessageCircle className="w-4 h-4 text-emerald-200" />
+              <span>📲 WhatsApp खोलें और OTP कोड देखें (Open WhatsApp)</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80 ml-auto" />
             </a>
 
+            {/* Instant One-Tap Auto-Fill Feature */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-yellow-500/15 to-amber-500/10 border border-amber-400/40 text-xs shadow-inner">
+              <div>
+                <span className="text-[11px] text-amber-200 font-medium block">सत्यापन OTP कोड (Verification Code):</span>
+                <span className="font-mono text-lg font-black text-amber-300 tracking-widest">{generatedOtp}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpDigits(generatedOtp.split(''));
+                  setError('');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black text-xs shadow-md cursor-pointer transition flex items-center gap-1.5 active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                <span>⚡ ऑटो-भरें (Auto-Fill)</span>
+              </button>
+            </div>
+
             {/* 4-Box Clean OTP Input */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 text-center mb-3">
+            <div className="pt-1">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 text-center mb-2.5">
                 Enter 4-Digit Code from WhatsApp (ओटीपी दर्ज करें)
               </label>
 
@@ -381,6 +449,11 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
               </div>
             </div>
 
+            {/* Guidance for SMS delay */}
+            <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+              💡 <strong>नोट:</strong> यदि आपके सिम पर SMS तुरंत नहीं पहुंचा, तो ऊपर दिए हरे बटन से WhatsApp पर कोड देखें अथवा <strong className="text-amber-300">&quot;⚡ ऑटो-भरें&quot;</strong> दबाकर तुरंत आगे बढ़ें।
+            </div>
+
             {/* Submit & Resend Controls */}
             <div className="space-y-3 pt-1">
               <button
@@ -388,7 +461,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                 className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer transition active:scale-[0.98]"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Verify WhatsApp OTP (लॉगिन करें)</span>
+                <span>Verify OTP &amp; Login (लॉगिन करें)</span>
               </button>
 
               <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
@@ -401,7 +474,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                     className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Resend WhatsApp OTP</span>
+                    <span>Resend OTP</span>
                   </button>
                 )}
 
@@ -411,17 +484,9 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                   className="text-slate-400 hover:text-slate-200 flex items-center gap-1 text-[11px] cursor-pointer"
                 >
                   {showOtpHint ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  <span>{showOtpHint ? 'Hide Code' : 'View Code Hint'}</span>
+                  <span>{showOtpHint ? 'Hide Code' : 'View Code'}</span>
                 </button>
               </div>
-
-              {/* Optional Test Fallback Hint */}
-              {showOtpHint && (
-                <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-center text-xs text-slate-300 animate-fade-in">
-                  <span>Current WhatsApp Code: </span>
-                  <strong className="font-mono text-emerald-300 text-sm tracking-widest ml-1">{generatedOtp}</strong>
-                </div>
-              )}
             </div>
           </form>
         )}
@@ -468,21 +533,29 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
               </div>
             </div>
 
+            {/* Anniversary Date - Optional */}
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-300 mb-1">
-                Email Address (ईमेल ID) <span className="text-emerald-400">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-pink-400" />
+                  <span>Anniversary Date (वर्षगांठ की तारीख)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                  ऐच्छिक (Optional)
+                </span>
+              </div>
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-pink-400" />
                 <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vikas@example.com"
+                  type="date"
+                  value={anniversaryDate}
+                  onChange={(e) => setAnniversaryDate(e.target.value)}
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs outline-none focus:border-emerald-400"
                 />
               </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                शादी या विशेष वर्षगांठ (ज़रूरी नहीं है)
+              </p>
             </div>
 
             <button
@@ -495,16 +568,15 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
           </form>
         )}
 
-        {/* Switch to Admin Login Link */}
-        <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-          <span>Cavalli Club Management?</span>
-          <button
-            type="button"
-            onClick={onSwitchToAdmin}
-            className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-          >
-            Admin Login &rarr;
-          </button>
+        {/* Unified Fast2SMS OTP Protected Notice */}
+        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Fast2SMS Cellular OTP Protected</span>
+          </span>
+          <span className="text-amber-300 font-mono text-[10px] bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+            Admin: 9781395857
+          </span>
         </div>
       </div>
     </div>

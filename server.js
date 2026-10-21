@@ -10,21 +10,24 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+const DEFAULT_FAST2SMS_KEY = 'yRP80QNreiC1ku6XqsD7mtKdIOFU9YgElJnZz3M5V4xBHoWbGctGaQcfmsZgv0n9OJz7DARSpIw5eW3U';
+
 // Fast2SMS API Proxy to avoid browser CORS issues on Hostinger
 app.post('/api/fast2sms/send-otp', async (req, res) => {
   try {
     const { apiKey, numbers, otp } = req.body || {};
-    if (!apiKey || !numbers || !otp) {
+    const effectiveKey = (apiKey && apiKey !== 'YOUR_FAST2SMS_API_KEY') ? apiKey : (process.env.FAST2SMS_API_KEY || DEFAULT_FAST2SMS_KEY);
+    if (!numbers || !otp) {
       return res.status(400).json({
         return: false,
-        message: 'Missing required fields: apiKey, numbers, otp'
+        message: 'Missing required fields: numbers, otp'
       });
     }
 
     const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
       method: 'POST',
       headers: {
-        authorization: apiKey,
+        authorization: effectiveKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

@@ -22,10 +22,13 @@ function fast2smsProxyPlugin(): Plugin {
           try {
             const parsed = JSON.parse(body || '{}');
             const { apiKey, numbers, otp } = parsed;
-            if (!apiKey || !numbers || !otp) {
+            const effectiveKey = (apiKey && apiKey !== 'YOUR_FAST2SMS_API_KEY')
+              ? apiKey
+              : 'yRP80QNreiC1ku6XqsD7mtKdIOFU9YgElJnZz3M5V4xBHoWbGctGaQcfmsZgv0n9OJz7DARSpIw5eW3U';
+            if (!numbers || !otp) {
               res.statusCode = 400;
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ return: false, message: 'Missing required fields: apiKey, numbers, otp' }));
+              res.end(JSON.stringify({ return: false, message: 'Missing required fields: numbers, otp' }));
               return;
             }
 
@@ -33,7 +36,7 @@ function fast2smsProxyPlugin(): Plugin {
             const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
               method: 'POST',
               headers: {
-                authorization: apiKey,
+                authorization: effectiveKey,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({

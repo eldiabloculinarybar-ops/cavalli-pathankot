@@ -192,14 +192,23 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
           {activeTab === 'hpanel' && (
             <div className="space-y-4">
               {/* Highlight Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 to-indigo-950/60 border border-purple-500/30 flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-white text-sm">Hostinger Ready: Pre-Configured Files</p>
-                  <p className="text-slate-300 mt-1 leading-relaxed">
-                    This project already includes <code className="bg-slate-800 px-1 py-0.5 rounded text-purple-300 font-mono">public/.htaccess</code> (for SPA routing &amp; Gzip) and <code className="bg-slate-800 px-1 py-0.5 rounded text-emerald-300 font-mono">public/api/send-otp.php</code> (for Hostinger Fast2SMS CORS proxy). They will automatically be copied to your <code className="text-amber-300 font-mono">dist/</code> folder when you build!
-                  </p>
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/60 to-indigo-950/60 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-white text-sm">✅ dist Folder Ready &amp; Pre-Built!</p>
+                    <p className="text-slate-300 mt-0.5 leading-relaxed text-xs">
+                      Humne aapke liye <code className="text-amber-300 font-mono">dist</code> folder aur ready-to-upload <code className="text-emerald-300 font-mono">dist-deploy.zip</code> bana diya hai.
+                    </p>
+                  </div>
                 </div>
+                <a
+                  href="/dist-deploy.zip"
+                  download="dist-deploy.zip"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition shrink-0"
+                >
+                  <span>📥 Download dist-deploy.zip</span>
+                </a>
               </div>
 
               {/* Step 1 */}

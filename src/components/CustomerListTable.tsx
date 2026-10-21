@@ -212,6 +212,11 @@ export const CustomerListTable: React.FC<CustomerListTableProps> = ({
                       <div className="text-[10px] text-slate-400">
                         {monthName} &bull; Age {currentAge} (Turning {turningAge})
                       </div>
+                      {c.anniversaryDate && (
+                        <div className="text-[10px] text-pink-300 font-medium flex items-center gap-1 mt-0.5">
+                          <span>💍 Anniv: {formatDOB(c.anniversaryDate)}</span>
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4">

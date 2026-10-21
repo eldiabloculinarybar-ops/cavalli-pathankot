@@ -29,6 +29,7 @@ export interface Customer {
   phone: string;
   email?: string;
   dob: string; // YYYY-MM-DD
+  anniversaryDate?: string; // YYYY-MM-DD (Optional)
   subscriptionTier: SubscriptionTierId;
   subscriptionStatus: SubscriptionApprovalStatus;
   requestedPlanId?: SubscriptionTierId;

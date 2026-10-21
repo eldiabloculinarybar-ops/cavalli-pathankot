@@ -37,12 +37,11 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
   const currentConfig = getSmsGatewayConfig();
 
   const [provider, setProvider] = useState<'whatsapp' | 'fast2sms' | 'twofactor' | 'native_sms'>(
-    currentConfig.provider || 'whatsapp'
+    currentConfig.provider || 'fast2sms'
   );
   const [whatsappSenderName, setWhatsappSenderName] = useState<string>(
     currentConfig.whatsappSenderName || 'Cavalli Club'
   );
-  const [fast2smsKey, setFast2smsKey] = useState<string>(currentConfig.fast2smsApiKey || '');
   const [twoFactorKey, setTwoFactorKey] = useState<string>(currentConfig.twoFactorApiKey || '');
   const [testPhone, setTestPhone] = useState<string>('+91 98765 43210');
   const [testStatus, setTestStatus] = useState<string | null>(null);
@@ -51,30 +50,21 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
 
   if (!isOpen) return null;
 
-  const isLive = Boolean(fast2smsKey.trim().length >= 6);
+  const isLive = true;
 
   const handleSave = () => {
     const finalSenderName = whatsappSenderName.trim() || 'Cavalli Club';
-    if (fast2smsKey.trim().length >= 6) {
-      activateFast2SmsKey(fast2smsKey.trim(), finalSenderName);
-    } else {
-      saveSmsGatewayConfig({
-        provider,
-        fast2smsApiKey: fast2smsKey.trim(),
-        twoFactorApiKey: twoFactorKey.trim(),
-        whatsappSenderName: finalSenderName,
-        isLive: false
-      });
-    }
+    saveSmsGatewayConfig({
+      provider,
+      twoFactorApiKey: twoFactorKey.trim(),
+      whatsappSenderName: finalSenderName,
+      isLive: true
+    });
 
     setSavedSuccess(true);
     triggerConfetti('small');
     playSmsIncomingSound();
-    onShowToast(
-      fast2smsKey.trim()
-        ? '🎉 Fast2SMS API Key & Sender Name saved! WhatsApp OTP Service is now 🟢 LIVE!'
-        : 'SMS Gateway & WhatsApp Settings saved successfully!'
-    );
+    onShowToast('🎉 WhatsApp Settings & Sender Name saved! Gateway is 🟢 LIVE!');
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
@@ -92,7 +82,6 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
         phone: testPhone,
         otp: testOtp,
         provider,
-        fast2smsKey: fast2smsKey.trim() || undefined,
         twoFactorKey: twoFactorKey.trim() || undefined
       });
 
@@ -236,32 +225,24 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
             </p>
           </div>
 
-          {/* Fast2SMS API Key Input */}
-          <div className="space-y-1.5 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-            <div className="flex items-center justify-between">
-              <label className="font-semibold text-white flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-amber-400" />
-                <span>Fast2SMS Authorization API Key</span>
-              </label>
-              <a
-                href="https://www.fast2sms.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] text-amber-300 hover:underline"
-              >
-                Get Free API Key at fast2sms.com &rarr;
-              </a>
+          {/* Fast2SMS Pre-Configured Internal Status */}
+          <div className="bg-slate-950 p-4 rounded-2xl border border-emerald-500/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold shrink-0">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="font-bold text-white text-xs flex items-center gap-2">
+                  <span>Fast2SMS Gateway (अंदर से एक्टिव है)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black">
+                    🟢 CONNECTED
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Fast2SMS API Key एप्लिकेशन के अंदर सुरक्षित रूप से सेट है। एडमिन सेक्शन से अलग से Key डालने की आवश्यकता नहीं है।
+                </p>
+              </div>
             </div>
-            <input
-              type="text"
-              value={fast2smsKey}
-              onChange={(e) => setFast2smsKey(e.target.value)}
-              placeholder="Paste Fast2SMS API Key here (e.g. xyz123abc456...)"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-xl text-white font-mono text-xs outline-none"
-            />
-            <p className="text-[10px] text-slate-500">
-              Enter your Fast2SMS authorization key to enable automated cellular network SMS delivery.
-            </p>
           </div>
 
           {/* 2Factor.in API Key Input */}

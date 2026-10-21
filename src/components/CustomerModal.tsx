@@ -7,7 +7,7 @@ import {
   X,
   User,
   Phone,
-  Mail,
+  Heart,
   Calendar,
   MapPin,
   FileText,
@@ -38,12 +38,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   const [step, setStep] = useState<1 | 2>(defaultStep);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [anniversaryDate, setAnniversaryDate] = useState('');
   const [dob, setDob] = useState('');
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTierId>('1month');
-  const [preferredChannel, setPreferredChannel] = useState<'email' | 'whatsapp' | 'both'>('both');
+  const [preferredChannel, setPreferredChannel] = useState<'email' | 'whatsapp' | 'both'>('whatsapp');
   const [validationError, setValidationError] = useState('');
 
   // Populate if editing
@@ -51,7 +51,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     if (initialCustomer) {
       setName(initialCustomer.name);
       setPhone(initialCustomer.phone);
-      setEmail(initialCustomer.email || '');
+      setAnniversaryDate(initialCustomer.anniversaryDate || '');
       setDob(initialCustomer.dob);
       setCity(initialCustomer.city || '');
       setNotes(initialCustomer.notes || '');
@@ -62,12 +62,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       // Default reset for new customer
       setName('');
       setPhone('+91 ');
-      setEmail('');
+      setAnniversaryDate('');
       setDob('1998-10-19');
       setCity('');
       setNotes('');
       setSubscriptionTier('1month');
-      setPreferredChannel('both');
+      setPreferredChannel('whatsapp');
       setStep(1);
     }
     setValidationError('');
@@ -87,10 +87,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       setValidationError('कृपया मान्य फोन नंबर दर्ज करें (Please enter a valid phone number)');
       return;
     }
-    if (!email.trim() || !email.includes('@')) {
-      setValidationError('कृपया मान्य ईमेल पता दर्ज करें (Valid email required for birthday greetings)');
-      return;
-    }
     if (!dob) {
       setValidationError('कृपया जन्म तिथि (Date of Birth) चुनें');
       return;
@@ -105,8 +101,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       id: initialCustomer?.id || `cust-${Date.now()}`,
       name: name.trim(),
       phone: phone.trim(),
-      email: email.trim().toLowerCase(),
+      email: initialCustomer?.email || undefined,
       dob,
+      anniversaryDate: anniversaryDate.trim() || undefined,
       subscriptionTier,
       subscriptionStatus: 'active',
       subscriptionStartDate: initialCustomer?.subscriptionStartDate || new Date().toISOString().split('T')[0],
@@ -172,7 +169,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (name && email && dob) setStep(2);
+              if (name && phone && dob) setStep(2);
             }}
             className={`py-2.5 px-4 text-center font-medium flex items-center justify-center gap-2 transition ${
               step === 2
@@ -236,22 +233,30 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Email Address */}
+                {/* Anniversary Date (Optional - वर्षगांठ की तारीख) */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Email ID (for Birthday Wish) <span className="text-rose-400">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-pink-400" />
+                      <span>Anniversary Date (वर्षगांठ)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 lowercase bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                      ऐच्छिक (Optional)
+                    </span>
+                  </div>
                   <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-pink-400" />
                     <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="rahul.sharma@example.com"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 focus:border-rose-400 focus:ring-1 focus:ring-rose-400 rounded-xl text-white placeholder-slate-500 text-sm outline-none"
+                      type="date"
+                      value={anniversaryDate}
+                      onChange={(e) => setAnniversaryDate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 focus:border-pink-400 focus:ring-1 focus:ring-pink-400 rounded-xl text-white placeholder-slate-500 text-sm outline-none"
                     />
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    शादी या विशेष वर्षगांठ (ज़रूरी नहीं है)
+                  </p>
                 </div>
 
                 {/* Date of Birth */}

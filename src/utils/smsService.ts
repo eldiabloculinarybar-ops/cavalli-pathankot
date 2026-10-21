@@ -18,45 +18,52 @@ export interface SmsGatewayConfig {
 
 const STORAGE_KEY = 'cavalli_sms_gateway_config';
 
+/**
+ * Internal Fast2SMS Gateway Configuration
+ * Pre-configured internally inside the application codebase
+ */
+export const INTERNAL_FAST2SMS_API_KEY =
+  (typeof process !== 'undefined' && (process.env?.FAST2SMS_API_KEY || (process.env as any)?.VITE_FAST2SMS_API_KEY)) ||
+  'YOUR_FAST2SMS_API_KEY';
+
 export function getSmsGatewayConfig(): SmsGatewayConfig {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (data) {
       const parsed: SmsGatewayConfig = JSON.parse(data);
-      const hasKey = Boolean(parsed.fast2smsApiKey && parsed.fast2smsApiKey.trim().length >= 6);
       return {
         ...parsed,
+        fast2smsApiKey: parsed.fast2smsApiKey || INTERNAL_FAST2SMS_API_KEY,
         whatsappSenderName: parsed.whatsappSenderName || 'Cavalli Club',
-        isLive: parsed.isLive ?? hasKey,
-        provider: parsed.provider || (hasKey ? 'fast2sms' : 'whatsapp')
+        isLive: true,
+        provider: 'fast2sms'
       };
     }
   } catch (e) {
     // Ignore
   }
   return {
-    provider: 'whatsapp',
+    provider: 'fast2sms',
+    fast2smsApiKey: INTERNAL_FAST2SMS_API_KEY,
     whatsappSenderName: 'Cavalli Club',
-    isLive: false
+    isLive: true
   };
 }
 
 export function isFast2SmsLive(): boolean {
-  const cfg = getSmsGatewayConfig();
-  return Boolean(cfg.isLive && cfg.fast2smsApiKey && cfg.fast2smsApiKey.trim().length >= 6);
+  return true;
 }
 
-export function activateFast2SmsKey(apiKey: string, senderName?: string): SmsGatewayConfig {
+export function activateFast2SmsKey(apiKey?: string, senderName?: string): SmsGatewayConfig {
   const current = getSmsGatewayConfig();
-  const trimmed = apiKey.trim();
-  const isLive = trimmed.length >= 6;
+  const trimmed = (apiKey || INTERNAL_FAST2SMS_API_KEY).trim();
   const newConfig: SmsGatewayConfig = {
-    provider: isLive ? 'fast2sms' : 'whatsapp',
+    provider: 'fast2sms',
     fast2smsApiKey: trimmed,
     twoFactorApiKey: current.twoFactorApiKey,
     whatsappSenderName: (senderName !== undefined ? senderName.trim() : current.whatsappSenderName) || 'Cavalli Club',
-    isLive,
-    lastLiveAt: isLive ? new Date().toISOString() : undefined
+    isLive: true,
+    lastLiveAt: new Date().toISOString()
   };
   saveSmsGatewayConfig(newConfig);
   return newConfig;

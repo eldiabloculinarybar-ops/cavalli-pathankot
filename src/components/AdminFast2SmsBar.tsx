@@ -62,19 +62,20 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
       if (res.fast2smsSuccess) {
         setTestResult({
           text: `✅ Cellular SMS delivered to ${testPhone} via Fast2SMS (OTP: ${testOtp})!`,
-          waUrl: res.waUrl,
           otp: testOtp,
           isSuccess: true
         });
         onShowToast(`Real Cellular SMS delivered via Fast2SMS!`);
       } else {
+        const is996 = res.message?.includes('996') || res.fast2smsError?.includes('996');
         setTestResult({
-          text: `📲 WhatsApp OTP (${testOtp}) तैयार है! (Fast2SMS Key सक्रिय न होने पर WhatsApp रूट)`,
-          waUrl: res.waUrl,
+          text: is996
+            ? `⚠️ Fast2SMS Code 996: fast2sms.com पर OTP SMS KYC / Website URL वेरिफाई करें (Test OTP: ${testOtp})`
+            : `📱 Fast2SMS Status: ${res.message || 'OTP Generated'} (Code: ${testOtp})`,
           otp: testOtp,
-          isSuccess: true
+          isSuccess: !is996
         });
-        onShowToast(`WhatsApp Test OTP (${testOtp}) dispatched!`);
+        onShowToast(`Test OTP: ${testOtp}`);
       }
     } catch (err: any) {
       setTestResult({
@@ -101,14 +102,14 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Fast2SMS &amp; Live WhatsApp OTP Service
+                Fast2SMS Cellular SMS Gateway
               </h2>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider">
                 Pre-Configured Internally
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Fast2SMS API Key एप्लिकेशन के अंदर सुरक्षित रूप से सेट है। सभी OTP व बर्थडे विशेज 🟢 LIVE डिलीवर हो रहे हैं।
+              Fast2SMS API Key एप्लिकेशन के अंदर सुरक्षित रूप से सेट है। सभी सेल्युलर फ़ोन OTP सीधे SIM इनबॉक्स में भेजे जाते हैं।
             </p>
           </div>
         </div>
@@ -120,7 +121,7 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span>🟢 LIVE: WhatsApp OTP &amp; SMS Gateway Connected</span>
+            <span>🟢 LIVE: Fast2SMS Cellular Gateway Connected</span>
           </div>
         </div>
       </div>
@@ -202,22 +203,11 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
               <p className={`text-[11px] leading-tight font-medium ${testResult.isSuccess ? 'text-emerald-300' : 'text-amber-300'}`}>
                 {testResult.text}
               </p>
-              {testResult.waUrl && (
+              {testResult.otp && (
                 <div className="flex items-center gap-2 pt-0.5">
-                  <a
-                    href={testResult.waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <span>📲 Open WhatsApp Test</span>
-                    <span className="opacity-70">&rarr;</span>
-                  </a>
-                  {testResult.otp && (
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      Code: <strong className="text-amber-300">{testResult.otp}</strong>
-                    </span>
-                  )}
+                  <span className="text-[11px] text-slate-300 font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700">
+                    Cellular OTP: <strong className="text-amber-300 font-bold">{testResult.otp}</strong>
+                  </span>
                 </div>
               )}
             </div>

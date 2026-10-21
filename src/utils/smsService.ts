@@ -214,10 +214,10 @@ export async function dispatchRealOtpToPhone({
   let fast2smsSent = false;
   let fast2smsErrorMessage = '';
 
-  // 3. FAST2SMS Real Cellular SMS & WhatsApp OTP Gateway (Requires valid API Key)
+  // 3. FAST2SMS Real Cellular SMS Gateway
   const isKeyValid = hasValidFast2SmsKey();
 
-  if (isKeyValid && (effectiveProvider === 'fast2sms' || isFast2SmsLive())) {
+  if (isKeyValid) {
     try {
       const proxyEndpoints = ['/api/fast2sms/send-otp', '/api/send-otp.php'];
       for (const endpoint of proxyEndpoints) {
@@ -238,7 +238,9 @@ export async function dispatchRealOtpToPhone({
               fast2smsSent = true;
               break;
             } else {
-              fast2smsErrorMessage = proxyData.message?.[0] || 'Fast2SMS returned error';
+              fast2smsErrorMessage = Array.isArray(proxyData.message)
+                ? proxyData.message.join(', ')
+                : (proxyData.message || (proxyData.status_code ? `Fast2SMS Code ${proxyData.status_code}` : 'Fast2SMS returned error'));
             }
           }
         } catch (e) {
@@ -263,41 +265,35 @@ export async function dispatchRealOtpToPhone({
         if (data.return) {
           fast2smsSent = true;
         } else {
-          fast2smsErrorMessage = data.message?.[0] || 'Invalid Authentication';
+          fast2smsErrorMessage = Array.isArray(data.message)
+            ? data.message.join(', ')
+            : (data.message || (data.status_code ? `Fast2SMS Code ${data.status_code}` : 'Fast2SMS error'));
         }
       }
     } catch (err: any) {
-      fast2smsErrorMessage = err.message || 'Network error';
+      fast2smsErrorMessage = err.message || 'Network error connecting to Fast2SMS';
     }
-  } else if (!isKeyValid) {
+  } else {
     fast2smsErrorMessage = 'Fast2SMS API Key is not set or invalid';
   }
 
   if (fast2smsSent) {
     return {
       success: true,
-      message: `Real OTP successfully delivered to ${tenDigit} via Live Fast2SMS Gateway!`,
-      channelUsed: 'Fast2SMS Live Gateway',
-      waUrl,
+      message: `Cellular SMS OTP sent to +91 ${tenDigit} via Fast2SMS!`,
+      channelUsed: 'Fast2SMS Cellular SMS',
+      waUrl: '',
       otp,
       fast2smsSuccess: true
     };
   }
 
-  // 4. Fallback: WhatsApp Direct Delivery (Opens WhatsApp or provides 1-tap link)
-  try {
-    window.open(waUrl, '_blank');
-  } catch (e) {
-    // Popup blocked, waUrl is provided to caller
-  }
-
+  // Pure Cellular SMS mode: No WhatsApp fallback
   return {
-    success: true,
-    message: isKeyValid
-      ? `OTP dispatched to +${internationalNumber} via WhatsApp!`
-      : `WhatsApp OTP ready for +${internationalNumber}! (Fast2SMS Key needed for cellular SMS)`,
-    channelUsed: 'WhatsApp Phone Delivery',
-    waUrl,
+    success: false,
+    message: fast2smsErrorMessage || 'Cellular SMS dispatch failed',
+    channelUsed: 'Fast2SMS Cellular SMS',
+    waUrl: '',
     otp,
     fast2smsSuccess: false,
     fast2smsError: fast2smsErrorMessage

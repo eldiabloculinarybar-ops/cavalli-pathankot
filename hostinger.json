@@ -1,0 +1,8 @@
+{
+  "name": "cavalli-club-birthday-manager",
+  "framework": "astro",
+  "buildCommand": "astro build",
+  "outputDirectory": "dist",
+  "nodeVersion": "18.x",
+  "entrypoint": "server.js"
+}

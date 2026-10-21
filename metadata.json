@@ -1,0 +1,6 @@
+{
+  "name": "Janamdin - Birthday Manager & Automated Wishes",
+  "description": "Admin and VIP portal for managing customer birthdays, subscription packages, calendar celebrations, and automated WhatsApp OTP greetings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

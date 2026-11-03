@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Customer, EmailLog, EmailTemplate, SubscriptionTierId } from './types';
+import { Customer, EmailLog, EmailTemplate, SubscriptionTierId, PartyBooking, PartyBookingStatus } from './types';
 import {
   getStoredCustomers,
   saveCustomers,
@@ -16,7 +16,9 @@ import {
   saveAdminSession,
   clearAdminSession,
   getAutomationSettings,
-  saveAutomationSettings
+  saveAutomationSettings,
+  getStoredPartyBookings,
+  savePartyBookings
 } from './utils/storage';
 import { isBirthdayToday, getMonthFromDOB } from './utils/dateUtils';
 import { SUBSCRIPTION_PLANS, DEFAULT_EMAIL_TEMPLATES } from './data/initialData';
@@ -39,6 +41,8 @@ import { AutomationSchedulerControl } from './components/AutomationSchedulerCont
 import { AdminGatewaySettingsModal } from './components/AdminGatewaySettingsModal';
 import { AdminFast2SmsBar } from './components/AdminFast2SmsBar';
 import { HostingerDeployModal } from './components/HostingerDeployModal';
+import { PartyBookingsView } from './components/PartyBookingsView';
+import { PartyBookingModal } from './components/PartyBookingModal';
 
 export default function App() {
   // Global Portal Mode: 'admin' or 'customer'
@@ -66,10 +70,15 @@ export default function App() {
   const [automationSettings, setAutomationSettings] = useState(() => getAutomationSettings());
 
   // Admin UI Navigation States
-  const [activeTab, setActiveTab] = useState<'monthwise' | 'directory' | 'approvals' | 'templates' | 'logs'>('monthwise');
+  const [activeTab, setActiveTab] = useState<'monthwise' | 'directory' | 'parties' | 'approvals' | 'templates' | 'logs'>('monthwise');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [customerModalInitial, setCustomerModalInitial] = useState<Customer | null>(null);
   const [customerModalStep, setCustomerModalStep] = useState<1 | 2>(1);
+
+  // Party Bookings States
+  const [partyBookings, setPartyBookings] = useState<PartyBooking[]>(() => getStoredPartyBookings());
+  const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
+  const [partyModalInitial, setPartyModalInitial] = useState<PartyBooking | null>(null);
 
   // SMS Gateway Modal State (Admin Only)
   const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
@@ -86,6 +95,10 @@ export default function App() {
   useEffect(() => {
     saveCustomers(customers);
   }, [customers]);
+
+  useEffect(() => {
+    savePartyBookings(partyBookings);
+  }, [partyBookings]);
 
   useEffect(() => {
     saveTemplates(templates);
@@ -388,34 +401,46 @@ export default function App() {
     showToast(enabled ? 'Automated Birthday Dispatch Engine is ACTIVE (08:00 AM Daily)' : 'Automated dispatch paused.');
   };
 
+  // Party Booking Handlers (पार्टी व इवेंट बुकिंग प्रबंधन)
+  const handleSavePartyBooking = (booking: PartyBooking) => {
+    setPartyBookings((prev) => {
+      const idx = prev.findIndex((b) => b.id === booking.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = booking;
+        return updated;
+      }
+      return [booking, ...prev];
+    });
+    showToast(`पार्टी बुकिंग (${booking.customerName} - ${booking.memberCount} सदस्य) सुरक्षित की गई!`);
+  };
+
+  const handleDeletePartyBooking = (bookingId: string) => {
+    if (window.confirm('क्या आप वाकई इस पार्टी बुकिंग को हटाना चाहते हैं?')) {
+      setPartyBookings((prev) => prev.filter((b) => b.id !== bookingId));
+      showToast('पार्टी बुकिंग हटा दी गई।');
+    }
+  };
+
+  const handleUpdatePartyStatus = (bookingId: string, status: PartyBookingStatus) => {
+    setPartyBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
+    );
+    showToast(`बुकिंग स्थिति "${status}" अपडेट की गई।`);
+  };
+
+  const handleAddNewParty = () => {
+    setPartyModalInitial(null);
+    setIsPartyModalOpen(true);
+  };
+
+  const handleEditParty = (booking: PartyBooking) => {
+    setPartyModalInitial(booking);
+    setIsPartyModalOpen(true);
+  };
+
   const todayBirthdays = customers.filter((c) => isBirthdayToday(c.dob));
   const pendingApprovalsCount = customers.filter((c) => c.subscriptionStatus === 'pending').length;
-
-  // -------------------------------------------------------------
-  // RENDER CUSTOMER PORTAL FLOW
-  // -------------------------------------------------------------
-  if (loggedInCustomer) {
-    return (
-      <>
-        {toastMessage && (
-          <div className="fixed bottom-5 right-5 z-50 bg-slate-900 border border-emerald-500/50 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 text-xs text-white animate-fade-in ring-1 ring-emerald-500/30">
-            <span className="text-base">🎉</span>
-            <span className="font-medium">{toastMessage}</span>
-          </div>
-        )}
-        <CustomerPortal
-          customer={loggedInCustomer}
-          onUpdateSubscriptionRequest={handleCustomerUpdateSubscription}
-          onLogout={handleCustomerLogout}
-          onSwitchToAdmin={() => {
-            setLoggedInCustomer(null);
-            setPortalMode('admin');
-          }}
-        />
-      </>
-    );
-  }
-
 
   // 1. If Admin is authenticated -> Render Admin Management Portal
   if (isAdminLoggedIn) {
@@ -437,16 +462,11 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onAddNewCustomer={handleAddNewCustomer}
-          onSwitchToCustomerPortal={() => {
-            if (customers.length > 0) {
-              handleViewAsCustomer(customers[0]);
-            } else {
-              showToast('No customers available for preview');
-            }
-          }}
+          onAddNewParty={handleAddNewParty}
           onOpenGatewaySettings={() => setIsGatewayModalOpen(true)}
           onOpenHostingerModal={() => setIsHostingerModalOpen(true)}
           todayCount={todayBirthdays.length}
+          partyCount={partyBookings.filter((b) => b.status !== 'cancelled').length}
           pendingApprovalsCount={pendingApprovalsCount}
           autoSendEnabled={automationSettings.autoSendEnabled}
         />
@@ -509,6 +529,17 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'parties' && (
+            <PartyBookingsView
+              bookings={partyBookings}
+              onAddNewBooking={handleAddNewParty}
+              onEditBooking={handleEditParty}
+              onDeleteBooking={handleDeletePartyBooking}
+              onUpdateStatus={handleUpdatePartyStatus}
+              onShowToast={showToast}
+            />
+          )}
+
           {activeTab === 'approvals' && (
             <AdminApprovalsView
               customers={customers}
@@ -542,6 +573,14 @@ export default function App() {
         </main>
 
         {/* Modals */}
+        <PartyBookingModal
+          isOpen={isPartyModalOpen}
+          onClose={() => setIsPartyModalOpen(false)}
+          onSaveBooking={handleSavePartyBooking}
+          initialBooking={partyModalInitial}
+          existingCustomers={customers}
+        />
+
         <CustomerModal
           isOpen={isCustomerModalOpen}
           onClose={() => setIsCustomerModalOpen(false)}
@@ -576,7 +615,7 @@ export default function App() {
         <footer className="border-t border-slate-900 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p>
-              &copy; {new Date().getFullYear()} Cavalli Club &bull; VIP Birthday &amp; Subscription Portal
+              &copy; {new Date().getFullYear()} Cavalli Club &bull; VIP Birthday &amp; Party Bookings Portal
             </p>
             <div className="flex items-center gap-4">
               <button
@@ -598,15 +637,13 @@ export default function App() {
     );
   }
 
-  // 2. FRONT PAGE: Unified Fast2SMS Cellular OTP Login for Both Admin & Customer!
+  // 2. FRONT PAGE: Fast2SMS Cellular OTP Login Exclusively for Admin (9781395857)
   return (
     <CustomerOtpLogin
-      customers={customers}
       adminPhone="9781395857"
       onAdminLoginSuccess={(phoneOrEmail, name) => {
         handleAdminLoginSuccess(phoneOrEmail, name);
       }}
-      onCustomerLoginSuccess={handleCustomerLoginSuccess}
     />
   );
 }

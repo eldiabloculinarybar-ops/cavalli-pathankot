@@ -61,25 +61,20 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
 
       if (res.fast2smsSuccess) {
         setTestResult({
-          text: `✅ Cellular SMS delivered to ${testPhone} via Fast2SMS (OTP: ${testOtp})!`,
-          otp: testOtp,
+          text: `✅ Cellular SMS delivered to ${testPhone} via Fast2SMS! Please check SMS inbox on the phone.`,
           isSuccess: true
         });
-        onShowToast(`Real Cellular SMS delivered via Fast2SMS!`);
+        onShowToast(`Real Cellular SMS delivered to ${testPhone}!`);
       } else {
-        const is996 = res.message?.includes('996') || res.fast2smsError?.includes('996');
         setTestResult({
-          text: is996
-            ? `⚠️ Fast2SMS Code 996: fast2sms.com पर OTP SMS KYC / Website URL वेरिफाई करें (Test OTP: ${testOtp})`
-            : `📱 Fast2SMS Status: ${res.message || 'OTP Generated'} (Code: ${testOtp})`,
-          otp: testOtp,
-          isSuccess: !is996
+          text: `⚠️ Fast2SMS Status: ${res.message || 'SMS dispatch failed'}`,
+          isSuccess: false
         });
-        onShowToast(`Test OTP: ${testOtp}`);
+        onShowToast(`Fast2SMS: ${res.message || 'SMS dispatch failed'}`);
       }
     } catch (err: any) {
       setTestResult({
-        text: `⚠️ Dispatch status: ${err.message || 'OTP triggered'}`,
+        text: `⚠️ Dispatch status: ${err.message || 'SMS dispatch error'}`,
         isSuccess: false
       });
     } finally {
@@ -203,13 +198,6 @@ export const AdminFast2SmsBar: React.FC<AdminFast2SmsBarProps> = ({
               <p className={`text-[11px] leading-tight font-medium ${testResult.isSuccess ? 'text-emerald-300' : 'text-amber-300'}`}>
                 {testResult.text}
               </p>
-              {testResult.otp && (
-                <div className="flex items-center gap-2 pt-0.5">
-                  <span className="text-[11px] text-slate-300 font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700">
-                    Cellular OTP: <strong className="text-amber-300 font-bold">{testResult.otp}</strong>
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>

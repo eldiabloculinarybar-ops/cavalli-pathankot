@@ -232,46 +232,39 @@ export async function dispatchRealOtpToPhone({
               otp
             })
           });
-          if (proxyRes.ok) {
-            const proxyData = await proxyRes.json();
-            if (proxyData.return) {
+
+          let proxyData: any = null;
+          try {
+            proxyData = await proxyRes.json();
+          } catch (e) {
+            // Not a JSON response
+          }
+
+          if (proxyData) {
+            if (proxyData.return === true) {
               fast2smsSent = true;
               break;
             } else {
-              fast2smsErrorMessage = Array.isArray(proxyData.message)
+              const statusCode = proxyData.status_code;
+              const msg = Array.isArray(proxyData.message)
                 ? proxyData.message.join(', ')
-                : (proxyData.message || (proxyData.status_code ? `Fast2SMS Code ${proxyData.status_code}` : 'Fast2SMS returned error'));
+                : (proxyData.message || '');
+
+              if (statusCode === 996 || msg.toLowerCase().includes('website verification')) {
+                fast2smsErrorMessage = 'Fast2SMS Status 996: Before using OTP Message API, complete website verification on fast2sms.com (Dev API -> OTP Message menu) or use DLT SMS API.';
+              } else if (statusCode === 413 || msg.toLowerCase().includes('invalid authentication')) {
+                fast2smsErrorMessage = 'Fast2SMS API Key active. Please complete website verification under Fast2SMS OTP Message menu.';
+              } else {
+                fast2smsErrorMessage = msg || (statusCode ? `Fast2SMS Error Code ${statusCode}` : 'Fast2SMS returned error');
+              }
             }
           }
         } catch (e) {
-          // Try next proxy
-        }
-      }
-
-      if (!fast2smsSent) {
-        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-          method: 'POST',
-          headers: {
-            authorization: effectiveKey,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            route: 'otp',
-            variables_values: otp,
-            numbers: tenDigit
-          })
-        });
-        const data = await response.json();
-        if (data.return) {
-          fast2smsSent = true;
-        } else {
-          fast2smsErrorMessage = Array.isArray(data.message)
-            ? data.message.join(', ')
-            : (data.message || (data.status_code ? `Fast2SMS Code ${data.status_code}` : 'Fast2SMS error'));
+          // Try next proxy endpoint
         }
       }
     } catch (err: any) {
-      fast2smsErrorMessage = err.message || 'Network error connecting to Fast2SMS';
+      fast2smsErrorMessage = err.message || 'Network error connecting to Fast2SMS proxy';
     }
   } else {
     fast2smsErrorMessage = 'Fast2SMS API Key is not set or invalid';

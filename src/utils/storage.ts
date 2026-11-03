@@ -1,4 +1,4 @@
-import { Customer, EmailLog, EmailTemplate } from '../types';
+import { Customer, EmailLog, EmailTemplate, PartyBooking } from '../types';
 import { INITIAL_CUSTOMERS, DEFAULT_EMAIL_TEMPLATES, INITIAL_LOGS } from '../data/initialData';
 
 const CUSTOMERS_KEY = 'janamdin_customers_v1';
@@ -6,6 +6,77 @@ const TEMPLATES_KEY = 'janamdin_templates_v1';
 const LOGS_KEY = 'janamdin_email_logs_v1';
 const ADMIN_AUTH_KEY = 'janamdin_admin_session_v1';
 const AUTO_DISPATCH_SETTINGS_KEY = 'janamdin_auto_settings_v1';
+const PARTY_BOOKINGS_KEY = 'cavalli_party_bookings_v1';
+
+export const INITIAL_PARTY_BOOKINGS: PartyBooking[] = [
+  {
+    id: 'pb-101',
+    customerName: 'Rahul Verma',
+    customerPhone: '+91 98765 43210',
+    customerDob: '1994-11-05',
+    partyDateTime: '2026-11-05T20:00',
+    memberCount: 25,
+    partyMenu: 'Tandoori Paneer Tikka, Chicken Malai Tikka, Mocktails & Soft Drinks, Dal Makhani, Butter Naan, Chocolate Truffle Birthday Cake',
+    status: 'confirmed',
+    tableOrArea: 'Cavalli VIP Rooftop',
+    advancePaid: 10000,
+    totalAmount: 35000,
+    specialNotes: 'VIP Birthday Celebration with balloon decoration and DJ sound.',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'pb-102',
+    customerName: 'Priya Sharma',
+    customerPhone: '+91 98123 45678',
+    customerDob: '1997-11-12',
+    partyDateTime: '2026-11-12T19:30',
+    memberCount: 15,
+    partyMenu: 'Crispy Corn, Spring Rolls, Virgin Mojito, Pasta Alfredo, Red Velvet Birthday Cake',
+    status: 'confirmed',
+    tableOrArea: 'Cavalli Velvet Lounge',
+    advancePaid: 5000,
+    totalAmount: 18000,
+    specialNotes: 'Table arrangement near live acoustic stage.',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'pb-103',
+    customerName: 'Amit Patel',
+    customerPhone: '+91 98987 65432',
+    customerDob: '1991-11-20',
+    partyDateTime: '2026-11-20T20:30',
+    memberCount: 40,
+    partyMenu: 'Deluxe Non-Veg Platter, Signature Cocktails, Hyderabadi Biryani, Gulab Jamun with Ice Cream, 3-Tier Customized Cake',
+    status: 'pending',
+    tableOrArea: 'Main Banquet Hall',
+    advancePaid: 15000,
+    totalAmount: 55000,
+    specialNotes: '40 guests anniversary & birthday gala, dedicated bartender needed.',
+    createdAt: new Date().toISOString()
+  }
+];
+
+export function getStoredPartyBookings(): PartyBooking[] {
+  try {
+    const data = localStorage.getItem(PARTY_BOOKINGS_KEY);
+    if (!data) {
+      localStorage.setItem(PARTY_BOOKINGS_KEY, JSON.stringify(INITIAL_PARTY_BOOKINGS));
+      return INITIAL_PARTY_BOOKINGS;
+    }
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Failed to load party bookings from storage', e);
+    return INITIAL_PARTY_BOOKINGS;
+  }
+}
+
+export function savePartyBookings(bookings: PartyBooking[]): void {
+  try {
+    localStorage.setItem(PARTY_BOOKINGS_KEY, JSON.stringify(bookings));
+  } catch (e) {
+    console.error('Failed to save party bookings to storage', e);
+  }
+}
 
 export function getStoredCustomers(): Customer[] {
   try {

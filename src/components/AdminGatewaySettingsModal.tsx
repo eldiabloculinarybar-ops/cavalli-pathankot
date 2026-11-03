@@ -96,9 +96,11 @@ export const AdminGatewaySettingsModal: React.FC<AdminGatewaySettingsModalProps>
         twoFactorKey: twoFactorKey.trim() || undefined
       });
 
-      playSmsIncomingSound();
-      triggerConfetti('medium');
-      setTestStatus(`Success! Test OTP ${testOtp} dispatched via ${res.channelUsed}.`);
+      if (res.fast2smsSuccess) {
+        setTestStatus(`✅ Cellular SMS delivered to ${testPhone} via Fast2SMS! Please check SMS inbox on the phone.`);
+      } else {
+        setTestStatus(`⚠️ Fast2SMS Status: ${res.message || 'SMS dispatch failed'}`);
+      }
     } catch (err: any) {
       setTestStatus(`Error: ${err.message || 'Gateway dispatch failed'}`);
     } finally {

@@ -85,3 +85,21 @@ export interface OTPVerification {
   generatedAt: number;
   expiresAt: number;
 }
+
+export type PartyBookingStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
+
+export interface PartyBooking {
+  id: string;
+  customerName: string; // ग्राहक का नाम
+  customerPhone: string; // मोबाइल नंबर
+  customerDob: string; // जन्म तिथि (Date of Birth)
+  partyDateTime: string; // पार्टी की तारीख एवं समय (Date & Time: YYYY-MM-DDTHH:mm)
+  memberCount: number; // पार्टी में कितने सदस्य/मेहमान होंगे (Guest / Member count)
+  partyMenu: string; // पार्टी का मेन्यू (Party food, drinks & catering items)
+  status: PartyBookingStatus; // स्थिति (Confirmed, Pending, etc.)
+  tableOrArea?: string; // टेबल / हॉल / लाउंज एरिया (e.g. Cavalli VIP Lounge, Rooftop)
+  advancePaid?: number; // अग्रिम राशि (Advance payment in ₹)
+  totalAmount?: number; // कुल अनुमानित राशि (Total Amount in ₹)
+  specialNotes?: string; // विशेष आवश्यकताएं / डेकोरेशन नोट्स
+  createdAt: string;
+}

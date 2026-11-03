@@ -37,15 +37,19 @@ if (!$data) {
     exit();
 }
 
+$defaultApiKey = 'yRP80QNreiC1ku6XqsD7mtKdIOFU9YgElJnZz3M5V4xBHoWbGctGaQcfmsZgv0n9OJz7DARSpIw5eW3U';
 $apiKey = trim($data['apiKey'] ?? '');
+if (empty($apiKey) || $apiKey === 'YOUR_FAST2SMS_API_KEY') {
+    $apiKey = $defaultApiKey;
+}
 $numbers = trim($data['numbers'] ?? '');
 $otp = trim($data['otp'] ?? '');
 
-if (empty($apiKey) || empty($numbers) || empty($otp)) {
+if (empty($numbers) || empty($otp)) {
     http_response_code(400);
     echo json_encode([
         'return' => false,
-        'message' => ['apiKey, numbers, and otp are required parameters.']
+        'message' => ['numbers and otp are required parameters.']
     ]);
     exit();
 }

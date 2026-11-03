@@ -3,6 +3,8 @@
 # Optimized for React Single Page Application (SPA) & Fast2SMS API
 # ==============================================================
 
+DirectoryIndex index.html index.php
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

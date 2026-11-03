@@ -82,7 +82,7 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-            <span>⚠️ Fix "Unsupported Framework" Error</span>
+            <span>⚠️ Fix "Hostinger Deployment Notice" &amp; Zip Guide</span>
           </button>
 
           <button
@@ -94,7 +94,7 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
             }`}
           >
             <UploadCloud className="w-4 h-4" />
-            <span>Method 1: File Manager (Easiest - 2 Min)</span>
+            <span>Method 1: Ready ZIP &amp; File Manager</span>
           </button>
 
           <button
@@ -127,24 +127,73 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
           {/* FIX ERROR TAB */}
           {activeTab === 'fix-error' && (
             <div className="space-y-4">
+              {/* Ready-to-download banner */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border-2 border-emerald-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-extrabold text-white text-sm">✅ Ready-to-Deploy ZIP तैयार है!</p>
+                    <p className="text-emerald-200 text-xs mt-0.5 leading-relaxed">
+                      आपको खुद से फाइलें ज़िप करने की आवश्यकता नहीं है। हमने बिल्कुल सही संरचना के साथ <code className="text-white font-mono bg-emerald-900/60 px-1 py-0.5 rounded">dist-deploy.zip</code> बना दिया है।
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/dist-deploy.zip"
+                  download="dist-deploy.zip"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 transition shrink-0 cursor-pointer"
+                >
+                  <FolderArchive className="w-4 h-4" />
+                  <span>📥 Download dist-deploy.zip</span>
+                </a>
+              </div>
+
               <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 space-y-3">
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
                   <span className="text-base">🚨</span>
-                  <span>"Unsupported framework or invalid project structure" Error Ka Solution:</span>
+                  <span>"Hostinger Deployment Notice" क्यों आ रहा है?</span>
                 </div>
                 <p className="text-slate-300 leading-relaxed text-xs">
-                  Hostinger में यह एरर तब आता है जब कोई यूजर पूरा प्रोजेक्ट (जैसे <code className="bg-slate-800 px-1 py-0.5 rounded font-mono text-amber-300">src, package.json, tsconfig.json</code>) सीधे <code className="text-white font-mono">public_html</code> में अपलोड कर देता है या Git से कच्चा कोड लिंक कर देता है।
+                  Hostinger में यह नोटिस तब आता है जब:
                 </p>
-                <div className="p-3 bg-slate-900 rounded-xl border border-amber-500/20 text-slate-200 space-y-1.5">
-                  <p className="font-bold text-white text-xs">इसे 2 मिनट में ठीक करने के 2 आसान तरीके:</p>
-                  <ul className="list-disc pl-5 space-y-1 text-slate-300 text-[11px]">
+                <ul className="list-disc pl-5 space-y-1 text-slate-300 text-[11px]">
+                  <li>
+                    <strong>कारण 1:</strong> आपकी कम्पाइल की गई <code className="text-amber-300 font-mono">index.html</code> फाइल सीधे <code className="text-white font-mono">public_html</code> में न होकर किसी सब-फोल्डर (जैसे <code className="text-slate-400 font-mono">public_html/dist/</code>) में चली गई है।
+                  </li>
+                  <li>
+                    <strong>कारण 2:</strong> Hostinger का डिफ़ॉल्ट <code className="text-amber-300 font-mono">default.php</code> फाइल अभी भी <code className="text-white font-mono">public_html</code> में मौजूद है।
+                  </li>
+                  <li>
+                    <strong>कारण 3:</strong> ज़िप बनाते समय पूरे <code className="text-slate-400 font-mono">dist</code> फोल्डर को बाहर से ज़िप कर दिया गया, जिससे अंदर <code className="text-slate-400 font-mono">dist/</code> नाम का फोल्डर बन गया।
+                  </li>
+                </ul>
+
+                <div className="p-3 bg-slate-900 rounded-xl border border-amber-500/20 text-slate-200 space-y-2">
+                  <p className="font-bold text-white text-xs">🛠️ Deploy फाइल को सही तरीके से ZIP कैसे करें? (3 आसान स्टेप्स):</p>
+                  <ol className="list-decimal pl-5 space-y-1.5 text-slate-300 text-[11px]">
                     <li>
-                      <strong className="text-amber-300">तरीका 1 (Recommended):</strong> अपने कंप्यूटर पर <code className="text-emerald-400 font-mono">npm run build</code> चलाएं। जो <strong className="text-white">dist</strong> फोल्डर बनेगा, केवल उसके <strong>अंदर की फाइलों</strong> को Hostinger के <code className="text-white font-mono">public_html</code> में अपलोड करें।
+                      <strong>तरीका A (सबसे आसान):</strong> ऊपर दिए गए हरे बटन <strong className="text-emerald-300">"Download dist-deploy.zip"</strong> पर क्लिक करें। यह पहले से 100% सही तरीके से ज़िप की हुई फाइल है।
                     </li>
                     <li>
-                      <strong className="text-amber-300">तरीका 2 (Hostinger Node.js Application):</strong> अगर आप Hostinger hPanel &rarr; Node.js यूज़ कर रहे हैं, तो Startup File में <code className="text-purple-300 font-mono">server.js</code> लिखें। हमने प्रोजेक्ट में <code className="text-purple-300 font-mono">server.js</code> और <code className="text-purple-300 font-mono">app.js</code> दोनों पहले से जोड़ दिए हैं!
+                      <strong>तरीका B (अपने कंप्यूटर से):</strong>
+                      <div className="mt-1 p-2 bg-slate-950 rounded-lg text-slate-300 space-y-1">
+                        <p>1. टर्मिनल में चलाएं: <code className="text-emerald-400 font-mono">npm run build</code></p>
+                        <p>2. अपने कंप्यूटर पर बने <code className="text-amber-300 font-mono">dist</code> फोल्डर को <strong>खोलें (Open करें)</strong>।</p>
+                        <p>3. <strong className="text-white">अंदर की सभी फाइलों को सेलेक्ट करें</strong> (<code className="text-slate-300 font-mono">index.html, _astro, .htaccess, api, index.php</code>)।</p>
+                        <p>4. राइट-क्लिक करके <strong className="text-emerald-300">"Compress" या "Add to ZIP"</strong> करें। (⚠️ <em>ध्यान रखें: फोल्डर के अंदर की फाइलों को ज़िप करना है, बाहर से dist फोल्डर को नहीं</em>)।</p>
+                      </div>
                     </li>
-                  </ul>
+                    <li>
+                      <strong>Hostinger में अपलोड व एक्सट्रैक्ट करें:</strong>
+                      <div className="mt-1 p-2 bg-slate-950 rounded-lg text-slate-300 space-y-1">
+                        <p>1. Hostinger hPanel &rarr; <strong>File Manager</strong> &rarr; <code className="text-amber-300 font-mono">public_html</code> खोलें।</p>
+                        <p>2. अगर वहाँ पहले से <code className="text-rose-400 font-mono">default.php</code> है, तो उसे <strong>डिलीट (Delete)</strong> कर दें।</p>
+                        <p>3. <strong>Upload</strong> बटन दबाकर अपनी ZIP फाइल अपलोड करें।</p>
+                        <p>4. ZIP फाइल पर राइट-क्लिक करके <strong className="text-emerald-400">Extract</strong> चुनें और पाथ में <code className="text-white font-mono">/public_html</code> रखें।</p>
+                        <p>5. एक्सट्रैक्ट होने के बाद अपनी वेबसाइट रिफ्रेश करें, आपका Cavalli Club एडमिन पोर्टल तुरंत लाइव खुल जाएगा!</p>
+                      </div>
+                    </li>
+                  </ol>
                 </div>
               </div>
 
@@ -157,14 +206,14 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <UploadCloud className="w-4 h-4 text-purple-400" />
-                      <span>तरीका 1: File Manager से अपलोड</span>
+                      <span>विस्तृत File Manager स्टेप्स देखें</span>
                     </span>
                     <span className="text-[10px] text-purple-300 font-bold group-hover:translate-x-1 transition">
                       देखें &rarr;
                     </span>
                   </div>
                   <p className="text-slate-400 text-[11px] leading-relaxed">
-                    सबसे आसान व तेज़ तरीका। <code className="text-emerald-400">dist/</code> फोल्डर ज़िप करें और <code>public_html</code> में एक्सट्रैक्ट करें।
+                    Hostinger hPanel File Manager में ZIP अपलोड और एक्सट्रैक्ट करने का विस्तृत स्क्रीन-बाय-स्क्रीन गाइड।
                   </p>
                 </div>
 
@@ -175,14 +224,14 @@ export const HostingerDeployModal: React.FC<HostingerDeployModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <Terminal className="w-4 h-4 text-indigo-400" />
-                      <span>तरीका 2: Node.js / Startup File</span>
+                      <span>Node.js / VPS डिप्लॉयमेंट तरीका</span>
                     </span>
                     <span className="text-[10px] text-indigo-300 font-bold group-hover:translate-x-1 transition">
                       देखें &rarr;
                     </span>
                   </div>
                   <p className="text-slate-400 text-[11px] leading-relaxed">
-                    Startup file: <code className="text-purple-300">server.js</code>, Node 18+, script: <code className="text-emerald-400">npm start</code>।
+                    Hostinger Node.js ऐप के लिए Startup file: <code className="text-purple-300">server.js</code>, Node 18+, script: <code className="text-emerald-400">npm start</code>।
                   </p>
                 </div>
               </div>

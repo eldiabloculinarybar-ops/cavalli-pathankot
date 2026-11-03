@@ -5,7 +5,13 @@
  * this script automatically serves the compiled dist/index.html or displays clear instructions.
  */
 
-// 1. If compiled dist/ exists, serve the Single Page App directly
+// 1. If index.html exists directly in this directory, serve it immediately
+if (file_exists(__DIR__ . '/index.html')) {
+    include __DIR__ . '/index.html';
+    exit;
+}
+
+// 2. If compiled dist/ exists, serve the Single Page App directly
 if (file_exists(__DIR__ . '/dist/index.html')) {
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
     

@@ -66,7 +66,7 @@ export const AdminApprovalsView: React.FC<AdminApprovalsViewProps> = ({
             )}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Review and approve customer requests for 1-Month (₹500, 20% OFF) and 3-Month (₹1000, 20% OFF) celebration plans.
+            Review and approve customer requests for 1-Month (₹500, 10% OFF) and 3-Month (₹1000, 10% OFF) celebration plans.
           </p>
         </div>
 
@@ -199,7 +199,7 @@ export const AdminApprovalsView: React.FC<AdminApprovalsViewProps> = ({
                     </div>
 
                     <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 font-bold text-xs border border-amber-500/30">
-                      20% Discount
+                      10% Discount
                     </span>
                   </div>
 
@@ -242,7 +242,7 @@ export const AdminApprovalsView: React.FC<AdminApprovalsViewProps> = ({
                   ) : (
                     <div className="w-full flex items-center justify-between text-xs text-slate-400">
                       <span className="text-emerald-400 font-medium">
-                        ✓ Membership Active with 20% discount coupon
+                        ✓ Membership Active with 10% discount coupon
                       </span>
 
                       <div className="flex items-center gap-2">

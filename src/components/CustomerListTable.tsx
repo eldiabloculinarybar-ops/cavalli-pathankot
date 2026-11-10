@@ -149,8 +149,8 @@ export const CustomerListTable: React.FC<CustomerListTableProps> = ({
             className="bg-transparent text-slate-200 text-xs focus:outline-none w-full cursor-pointer"
           >
             <option value="all">All Subscriptions (सभी प्लान)</option>
-            <option value="1month">1-Month Celebration (₹500, 20% OFF)</option>
-            <option value="3month">3-Month Premium (₹1000, 20% OFF)</option>
+            <option value="1month">1-Month Celebration (₹500, 10% OFF)</option>
+            <option value="3month">3-Month Premium (₹1000, 10% OFF)</option>
             <option value="gold">Gold VIP Club</option>
             <option value="platinum">Platinum Royal</option>
           </select>

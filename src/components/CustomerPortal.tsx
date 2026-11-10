@@ -50,7 +50,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const isPending = customer.subscriptionStatus === 'pending';
   const isApproved = customer.subscriptionStatus === 'approved' || customer.subscriptionStatus === 'active';
 
-  const couponCode = activePlan.id === '3month' ? 'QUARTER20' : 'MONTH20';
+  const couponCode = activePlan.id === '3month' ? 'QUARTER10' : 'MONTH10';
 
   const handleSelectPlan = (planId: SubscriptionTierId) => {
     setSelectedPlan(planId);
@@ -243,14 +243,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                      Your Exclusive 20% Discount Voucher
+                      Your Exclusive 10% Discount Voucher
                     </span>
                     <div className="text-sm font-extrabold text-white flex items-center gap-2">
                       <span>Code:</span>
                       <span className="font-mono text-base text-amber-300 font-black tracking-wider">
                         {couponCode}
                       </span>
-                      <span className="text-xs text-emerald-400 font-bold">(Flat 20% OFF)</span>
+                      <span className="text-xs text-emerald-400 font-bold">(Flat 10% OFF)</span>
                     </div>
                   </div>
                 </div>
@@ -261,7 +261,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                     className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow"
                   >
                     {copiedCode ? <Check className="w-4 h-4 stroke-[3]" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedCode ? 'Copied Code!' : 'Copy 20% Coupon'}</span>
+                    <span>{copiedCode ? 'Copied Code!' : 'Copy 10% Coupon'}</span>
                   </button>
                   <button
                     onClick={() => triggerConfetti('grand')}
@@ -278,7 +278,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1 text-emerald-400">
                     <Check className="w-3.5 h-3.5" />
-                    <span>20% Discount Activated</span>
+                    <span>10% Discount Activated</span>
                   </span>
                   <span className="flex items-center gap-1 text-emerald-400">
                     <Check className="w-3.5 h-3.5" />
@@ -309,8 +309,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 Subscription Request Submitted to Admin!
               </h3>
               <p className="text-amber-200 mt-1 leading-relaxed">
-                You have requested the <strong className="text-white">{requestedPlan.name} ({requestedPlan.price}) with 20% Birthday Discount</strong>.
-                Store Admin has been notified to review and approve your membership. As soon as the Admin clicks <strong>"Approve Plan"</strong>, your digital membership card and 20% discount coupon will immediately unlock here.
+                You have requested the <strong className="text-white">{requestedPlan.name} ({requestedPlan.price}) with 10% Birthday Discount</strong>.
+                Store Admin has been notified to review and approve your membership. As soon as the Admin clicks <strong>"Approve Plan"</strong>, your digital membership card and 10% discount coupon will immediately unlock here.
               </p>
             </div>
           </div>
@@ -329,14 +329,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Select between our 1-Month Plan (₹500, 20% discount) or 3-Month Plan (₹1000, 20% discount). Admin approves your subscription immediately.
+                Select between our 1-Month Plan (₹500, 10% discount) or 3-Month Plan (₹1000, 10% discount). Admin approves your subscription immediately.
               </p>
             </div>
           </div>
 
           {/* 1 Month vs 3 Month Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* PLAN 1: 1 Month Plan (₹500, 20% Discount) */}
+            {/* PLAN 1: 1 Month Plan (₹500, 10% Discount) */}
             <div
               className={`rounded-3xl border-2 p-6 transition-all flex flex-col justify-between relative ${
                 (isApproved && activePlan.id === '1month') || (!isApproved && selectedPlan === '1month')
@@ -345,7 +345,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               }`}
             >
               <span className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold text-xs uppercase tracking-wider shadow">
-                20% Birthday Discount
+                10% Birthday Discount
               </span>
 
               <div>
@@ -363,14 +363,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                   <span className="text-3xl font-extrabold text-white">₹500</span>
                   <span className="text-xs text-slate-400">/ 1 Month</span>
                   <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">
-                    Includes 20% OFF Coupon
+                    Includes 10% OFF Coupon
                   </span>
                 </div>
 
                 <div className="mt-5 space-y-2.5 text-xs text-slate-300">
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span><strong>Flat 20% Discount</strong> on your birthday order</span>
+                    <span><strong>Flat 10% Discount</strong> on your birthday order</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -405,13 +405,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       ? 'Current Active Membership Plan ✅'
                       : isPending && selectedPlan === '1month'
                       ? '1-Month Request Pending Approval ⏳'
-                      : 'Choose 1-Month Plan (₹500 with 20% OFF)'}
+                      : 'Choose 1-Month Plan (₹500 with 10% OFF)'}
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* PLAN 2: 3 Month Plan (₹1,000, 20% Discount) */}
+            {/* PLAN 2: 3 Month Plan (₹1,000, 10% Discount) */}
             <div
               className={`rounded-3xl border-2 p-6 transition-all flex flex-col justify-between relative ${
                 (isApproved && activePlan.id === '3month') || (!isApproved && selectedPlan === '3month')
@@ -420,7 +420,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               }`}
             >
               <span className="absolute -top-3 right-6 px-3 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow">
-                Best Value VIP &bull; 20% OFF
+                Best Value VIP &bull; 10% OFF
               </span>
 
               <div>
@@ -438,14 +438,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                   <span className="text-3xl font-extrabold text-white">₹1,000</span>
                   <span className="text-xs text-slate-400">/ 3 Months</span>
                   <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold text-xs">
-                    Flat 20% OFF Coupon
+                    Flat 10% OFF Coupon
                   </span>
                 </div>
 
                 <div className="mt-5 space-y-2.5 text-xs text-slate-300">
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span><strong>Flat 20% Discount</strong> valid for 3 full months</span>
+                    <span><strong>Flat 10% Discount</strong> valid for 3 full months</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -480,7 +480,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                       ? 'Current Active Membership Plan ✅'
                       : isPending && selectedPlan === '3month'
                       ? '3-Month Request Pending Approval ⏳'
-                      : 'Choose 3-Month Plan (₹1000 with 20% OFF)'}
+                      : 'Choose 3-Month Plan (₹1000 with 10% OFF)'}
                   </span>
                 </button>
               </div>

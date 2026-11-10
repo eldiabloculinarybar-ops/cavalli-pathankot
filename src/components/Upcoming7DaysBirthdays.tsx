@@ -101,7 +101,7 @@ export const Upcoming7DaysBirthdays: React.FC<Upcoming7DaysBirthdaysProps> = ({
   const generateAdvanceWishText = (item: (typeof upcomingCustomers)[0]) => {
     const { customer, formattedDate, weekday, turningAge, plan, daysLeft } = item;
     const timingPhrase = daysLeft === 1 ? 'कल (Tomorrow)' : `इस ${weekday} (${formattedDate})`;
-    const voucherCode = `${customer.subscriptionTier === '3month' ? 'QUARTER20' : 'MONTH20'}-ADV`;
+    const voucherCode = `${customer.subscriptionTier === '3month' ? 'QUARTER10' : 'MONTH10'}-ADV`;
 
     return (
       `🎂 *ADVANCE BIRTHDAY GREETINGS FROM ${senderName.toUpperCase()}!* ✨🍾\n\n` +
@@ -160,7 +160,7 @@ export const Upcoming7DaysBirthdays: React.FC<Upcoming7DaysBirthdaysProps> = ({
               )}
             </div>
             <p className="text-xs text-indigo-300/80 mt-0.5">
-              आगामी 7 दिनों के जन्मदिन - अग्रिम बधाई संदेश व 20% वाउचर पहले से तैयार करें (Prepare greetings in advance)
+              आगामी 7 दिनों के जन्मदिन - अग्रिम बधाई संदेश व 10% वाउचर पहले से तैयार करें (Prepare greetings in advance)
             </p>
           </div>
         </div>

@@ -178,7 +178,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
         <div className="flex items-center gap-2.5">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-slate-300">
-            <strong>Automated WhatsApp OTP &amp; Greeting System:</strong> Evaluates customer birthdays daily and dispatches personalized wishes with 20% discount coupons.
+            <strong>Automated WhatsApp OTP &amp; Greeting System:</strong> Evaluates customer birthdays daily and dispatches personalized wishes with 10% discount coupons.
           </span>
         </div>
 

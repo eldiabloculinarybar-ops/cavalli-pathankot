@@ -263,13 +263,13 @@ export default function App() {
       customerId,
       customerName: approvedCustomerName,
       customerEmail: approvedCustomerEmail,
-      subject: `✅ Subscription Approved! Welcome to ${plan.name} (20% OFF Active)`,
-      messageBody: `Dear ${approvedCustomerName},\n\nYour request for ${plan.name} (${plan.price}) has been officially APPROVED by Admin!\n\nYour 20% discount coupon code and automated birthday wishes are now active.`,
+      subject: `✅ Subscription Approved! Welcome to ${plan.name} (10% OFF Active)`,
+      messageBody: `Dear ${approvedCustomerName},\n\nYour request for ${plan.name} (${plan.price}) has been officially APPROVED by Admin!\n\nYour 10% discount coupon code and automated birthday wishes are now active.`,
       sentAt: new Date().toISOString(),
       status: 'delivered',
       tierUsed: planId,
       automationType: 'automated_cron',
-      discountCode: planId === '3month' ? 'QUARTER20' : 'MONTH20'
+      discountCode: planId === '3month' ? 'QUARTER10' : 'MONTH10'
     };
     setEmailLogs((prev) => [approvalLog, ...prev]);
 

@@ -47,7 +47,7 @@ export const AutomationSchedulerControl: React.FC<AutomationSchedulerControlProp
         const tier = customer.subscriptionTier || '1month';
         const plan = SUBSCRIPTION_PLANS[tier] || SUBSCRIPTION_PLANS['1month'];
         const bdayOtp = String(Math.floor(1000 + Math.random() * 9000));
-        const discountCode = tier === '3month' ? `QUARTER20-${bdayOtp}` : `MONTH20-${bdayOtp}`;
+        const discountCode = tier === '3month' ? `QUARTER10-${bdayOtp}` : `MONTH10-${bdayOtp}`;
 
         generatedLogs.push({
           id: `log-auto-${Date.now()}-${customer.id}`,
@@ -97,7 +97,7 @@ export const AutomationSchedulerControl: React.FC<AutomationSchedulerControlProp
               </h3>
             </div>
             <p className="text-xs text-slate-300 mt-0.5">
-              Scans birthdays daily at 08:00 AM and dispatches VIP Birthday Wishes with 4-Digit OTP and 20% discount vouchers directly to customer WhatsApp phones.
+              Scans birthdays daily at 08:00 AM and dispatches VIP Birthday Wishes with 4-Digit OTP and 10% discount vouchers directly to customer WhatsApp phones.
             </p>
             <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-400">
               <span className="flex items-center gap-1">

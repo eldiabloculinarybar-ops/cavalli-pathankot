@@ -60,7 +60,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
       setBirthdayOtp(newOtp);
 
       // Generate coupon code
-      const code = tier === '3month' ? `QUARTER20-${newOtp}` : `MONTH20-${newOtp}`;
+      const code = tier === '3month' ? `QUARTER10-${newOtp}` : `MONTH10-${newOtp}`;
       setDiscountCode(code);
 
       setCustomHeading(`Happy Birthday ${customer.name}! 🎂`);
@@ -80,8 +80,8 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
         `🎁 *YOUR EXCLUSIVE BIRTHDAY PRIVILEGES:*\n` +
         `• VIP Birthday OTP: *${newOtp}*\n` +
         `• Membership Tier: *${plan.name}*\n` +
-        `• Special Voucher: *${code}* (20% FLAT DISCOUNT)\n\n` +
-        `Show this WhatsApp message & Birthday OTP at Cavalli Club to claim your 20% celebration discount.\n\n` +
+        `• Special Voucher: *${code}* (10% FLAT DISCOUNT)\n\n` +
+        `Show this WhatsApp message & Birthday OTP at Cavalli Club to claim your 10% celebration discount.\n\n` +
         `With warm celebratory regards,\n*Cavalli Club VIP Management* 🥂`;
 
       setWaUrl(`https://api.whatsapp.com/send?phone=91${intl}&text=${encodeURIComponent(text)}`);
@@ -101,7 +101,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
         customerName: customer.name,
         phone: customer.phone,
         planName: plan.name,
-        discountPercent: plan.discountPercent || 20,
+        discountPercent: plan.discountPercent || 10,
         discountCode,
         birthdayOtp,
         customMessage,
@@ -114,7 +114,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
         customerName: customer.name,
         customerPhone: customer.phone,
         subject: `🎂 WhatsApp Birthday Wish & OTP (${birthdayOtp})`,
-        messageBody: `WhatsApp Birthday wish & OTP ${birthdayOtp} sent to ${customer.phone} with 20% discount coupon ${discountCode}`,
+        messageBody: `WhatsApp Birthday wish & OTP ${birthdayOtp} sent to ${customer.phone} with 10% discount coupon ${discountCode}`,
         sentAt: new Date().toISOString(),
         status: 'delivered',
         tierUsed: customer.subscriptionTier,
@@ -184,7 +184,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
               <div>
                 <p className="font-bold text-sm">WhatsApp जन्मदिन विश और OTP सफलतापूर्वक भेज दिया गया!</p>
                 <p className="text-[11px] text-emerald-300/90 mt-0.5">
-                  Customer के WhatsApp पर 4-अंकों का Birthday OTP (*{birthdayOtp}*) और 20% डिस्काउंट वाउचर डिलीवर हो गया।
+                  Customer के WhatsApp पर 4-अंकों का Birthday OTP (*{birthdayOtp}*) और 10% डिस्काउंट वाउचर डिलीवर हो गया।
                 </p>
               </div>
             </div>
@@ -214,7 +214,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
               <div className="flex items-center justify-between text-slate-400 mb-1">
                 <span className="font-semibold flex items-center gap-1.5">
                   <Gift className="w-3.5 h-3.5 text-amber-400" />
-                  <span>20% Discount Voucher</span>
+                  <span>10% Discount Voucher</span>
                 </span>
                 <button
                   type="button"
@@ -229,7 +229,7 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
                 {discountCode}
               </div>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Flat 20% Off for {plan.period}
+                Flat 10% Off for {plan.period}
               </p>
             </div>
           </div>
@@ -254,10 +254,10 @@ export const WhatsAppBirthdayModal: React.FC<WhatsAppBirthdayModalProps> = ({
                   <p className="text-amber-200 font-bold">🎁 YOUR EXCLUSIVE BIRTHDAY PRIVILEGES:</p>
                   <p>• VIP Birthday OTP: <strong className="text-emerald-300 text-sm">{birthdayOtp}</strong></p>
                   <p>• Membership Tier: <span className="text-white">{plan.name}</span></p>
-                  <p>• Special Voucher: <span className="text-amber-300">{discountCode}</span> (20% OFF)</p>
+                  <p>• Special Voucher: <span className="text-amber-300">{discountCode}</span> (10% OFF)</p>
                 </div>
                 <p className="text-[11px] text-emerald-100">
-                  Show this WhatsApp message &amp; Birthday OTP at Cavalli Club to redeem your 20% celebration discount.
+                  Show this WhatsApp message &amp; Birthday OTP at Cavalli Club to redeem your 10% celebration discount.
                 </p>
                 <p className="text-[10px] text-emerald-300/80 pt-1 text-right">
                   Sent via Cavalli Club Fast2SMS Live Gateway ✓✓

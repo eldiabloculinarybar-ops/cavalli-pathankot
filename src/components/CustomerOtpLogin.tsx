@@ -35,7 +35,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
   // Role selector: Admin or VIP Customer
   const [selectedRole, setSelectedRole] = useState<'admin' | 'customer'>('admin');
   const [step, setStep] = useState<'phone' | 'otp' | 'new_customer'>('phone');
-  const [phone, setPhone] = useState('9781395857');
+  const [phone, setPhone] = useState('');
   
   // New customer registration fields (if first time customer)
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -79,20 +79,13 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     });
   }, []);
 
-  // When changing role, automatically adjust default phone number
+  // When changing role, keep phone input completely blank
   const handleRoleChange = (role: 'admin' | 'customer') => {
     setSelectedRole(role);
     setError('');
     setSuccessNotice('');
     setStep('phone');
-    if (role === 'admin') {
-      setPhone(adminPhone);
-    } else {
-      // Find a sample customer number if available or clear
-      if (phone === adminPhone) {
-        setPhone(customers[0]?.phone ? customers[0].phone.slice(-10) : '9876543210');
-      }
-    }
+    setPhone('');
   };
 
   // Focus first input box on OTP step
@@ -133,7 +126,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
 
     // Role check: If Admin role is selected, verify it's the admin number
     if (selectedRole === 'admin' && digits !== cleanAdmin && !digits.endsWith(cleanAdmin)) {
-      setError(`⚠️ अनधिकृत एडमिन नंबर: एडमिन पोर्टल केवल अधिकृत नंबर (${adminPhone}) के लिए सुरक्षित है। ग्राहक लॉगिन के लिए ऊपर 'VIP Customer' चुनें।`);
+      setError(`⚠️ अनधिकृत नंबर: यह नंबर अधिकृत एडमिन के रूप में मान्य नहीं है। ग्राहक लॉगिन के लिए ऊपर 'VIP Customer' चुनें।`);
       return;
     }
 
@@ -380,7 +373,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder={selectedRole === 'admin' ? adminPhone : '9876543210'}
+                  placeholder={selectedRole === 'admin' ? '10-अंकों का एडमिन मोबाइल दर्ज करें' : '10-अंकों का ग्राहक मोबाइल दर्ज करें'}
                   className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 rounded-xl text-white placeholder-slate-500 text-sm outline-none font-mono tracking-wider font-bold"
                 />
               </div>
@@ -389,7 +382,7 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                 <MessageCircle className="w-3 h-3 text-emerald-400 shrink-0" />
                 <span>
                   {selectedRole === 'admin'
-                    ? `एडमिन (${adminPhone}) के WhatsApp पर 4-अंकों का वेरिफिकेशन OTP भेजा जाएगा।`
+                    ? 'अधिकृत एडमिन के WhatsApp पर 4-अंकों का वेरिफिकेशन OTP भेजा जाएगा।'
                     : 'आपके WhatsApp पर 4-अंकों का सुरक्षित वेरिफिकेशन OTP भेजा जाएगा।'}
                 </span>
               </p>

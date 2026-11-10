@@ -10,11 +10,11 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     rawPrice: 500,
     durationMonths: 1,
     period: '1 Month',
-    description: '1 Month active Cavalli Club membership with 20% discount on birthday & automated email wish.',
-    discountPercent: 20,
-    emailTemplateName: 'Cavalli 1-Month 20% Celebration Card',
+    description: '1 Month active Cavalli Club membership with 10% discount on birthday & automated email wish.',
+    discountPercent: 10,
+    emailTemplateName: 'Cavalli 1-Month 10% Celebration Card',
     perks: [
-      'Flat 20% Cavalli Club Birthday Discount Coupon (Save ₹500+)',
+      'Flat 10% Cavalli Club Birthday Discount Coupon (Save ₹300+)',
       'Automated morning celebratory email on your birthday',
       'Personalized digital birthday greeting card',
       'One-tap WhatsApp greeting ready',
@@ -30,11 +30,11 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     rawPrice: 1000,
     durationMonths: 3,
     period: '3 Months',
-    description: 'Quarterly membership (₹1000) with 20% discount throughout 3 months & Cavalli VIP birthday perks.',
-    discountPercent: 20,
-    emailTemplateName: 'Cavalli 3-Month 20% VIP Birthday Gala',
+    description: 'Quarterly membership (₹1000) with 10% discount throughout 3 months & Cavalli VIP birthday perks.',
+    discountPercent: 10,
+    emailTemplateName: 'Cavalli 3-Month 10% VIP Birthday Gala',
     perks: [
-      'Flat 20% Cavalli Discount Coupon valid for 3 full months',
+      'Flat 10% Cavalli Discount Coupon valid for 3 full months',
       'Automated special morning email with digital confetti card',
       'VIP complimentary birthday surprise gift with voucher code',
       'Priority celebration delivery & dedicated wish service',
@@ -121,18 +121,18 @@ export const DEFAULT_EMAIL_TEMPLATES: EmailTemplate[] = [
   {
     id: 'template_1month',
     tierId: '1month',
-    subject: '🎉 Cavalli Club: Happy Birthday {name}! Enjoy 20% OFF Birthday Privilege 🎂',
+    subject: '🎉 Cavalli Club: Happy Birthday {name}! Enjoy 10% OFF Birthday Privilege 🎂',
     heading: 'Cavalli Club Wishes You a Grand & Joyful Birthday!',
-    message: 'We are thrilled to celebrate with you today! As an esteemed patron of Cavalli Club with the 1-Month Plan, your special day is unlocked with a flat 20% celebration discount.',
-    complimentaryGift: 'Use code MONTH20 for flat 20% OFF on your Cavalli Club birthday celebration!'
+    message: 'We are thrilled to celebrate with you today! As an esteemed patron of Cavalli Club with the 1-Month Plan, your special day is unlocked with a flat 10% celebration discount.',
+    complimentaryGift: 'Use code MONTH10 for flat 10% OFF on your Cavalli Club birthday celebration!'
   },
   {
     id: 'template_3month',
     tierId: '3month',
-    subject: '🌟 Cavalli Club VIP: Grand Birthday Wishes {name}! Your 20% Privilege is Active ✨',
+    subject: '🌟 Cavalli Club VIP: Grand Birthday Wishes {name}! Your 10% Privilege is Active ✨',
     heading: 'Cavalli Club Raises a Toast to Another Fabulous Year!',
-    message: 'Happy Birthday! As our cherished Cavalli Club 3-Month Plan VIP member, you enjoy a flat 20% discount plus priority delivery for all your birthday festivities.',
-    complimentaryGift: 'Use code QUARTER20 for flat 20% OFF + complimentary Cavalli surprise dessert / gift!'
+    message: 'Happy Birthday! As our cherished Cavalli Club 3-Month Plan VIP member, you enjoy a flat 10% discount plus priority delivery for all your birthday festivities.',
+    complimentaryGift: 'Use code QUARTER10 for flat 10% OFF + complimentary Cavalli surprise dessert / gift!'
   },
   {
     id: 'template_basic',
@@ -185,7 +185,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     subscriptionStartDate: '2026-10-01',
     subscriptionEndDate: '2026-11-01',
     city: 'New Delhi',
-    notes: 'Selected 1-Month Plan (₹500 with 20% discount)',
+    notes: 'Selected 1-Month Plan (₹500 with 10% discount)',
     preferredChannel: 'both',
     createdAt: '2026-10-01T10:30:00Z'
   },
@@ -200,7 +200,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     subscriptionStartDate: '2026-09-15',
     subscriptionEndDate: '2026-12-15',
     city: 'Mumbai',
-    notes: 'Selected 3-Month Plan (₹1000 with 20% discount)',
+    notes: 'Selected 3-Month Plan (₹1000 with 10% discount)',
     preferredChannel: 'both',
     createdAt: '2026-09-15T11:20:00Z'
   },
@@ -215,7 +215,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     requestedPlanId: '1month',
     subscriptionRequestedAt: '2026-10-19T10:15:00Z',
     city: 'Chandigarh',
-    notes: 'Customer requested 1-Month Plan (₹500, 20% OFF) via Phone OTP login',
+    notes: 'Customer requested 1-Month Plan (₹500, 10% OFF) via Phone OTP login',
     preferredChannel: 'both',
     createdAt: '2026-10-19T10:15:00Z'
   },
@@ -230,7 +230,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     requestedPlanId: '3month',
     subscriptionRequestedAt: '2026-10-19T11:45:00Z',
     city: 'Pune',
-    notes: 'Customer requested 3-Month Plan (₹1000, 20% OFF) via Phone OTP login',
+    notes: 'Customer requested 3-Month Plan (₹1000, 10% OFF) via Phone OTP login',
     preferredChannel: 'both',
     createdAt: '2026-10-19T11:45:00Z'
   },
@@ -416,12 +416,12 @@ export const INITIAL_LOGS: EmailLog[] = [
     customerId: 'cust-1',
     customerName: 'Aarav Sharma',
     customerEmail: 'aarav.sharma@example.com',
-    subject: '🎉 Happy Birthday Aarav Sharma! Enjoy 20% OFF with your 1-Month Plan 🎂',
-    messageBody: 'Wishing Aarav Sharma a truly joyful birthday celebration! MONTH20 applied.',
+    subject: '🎉 Happy Birthday Aarav Sharma! Enjoy 10% OFF with your 1-Month Plan 🎂',
+    messageBody: 'Wishing Aarav Sharma a truly joyful birthday celebration! MONTH10 applied.',
     sentAt: new Date().toISOString(),
     status: 'delivered',
     tierUsed: '1month',
     automationType: 'automated_cron',
-    discountCode: 'MONTH20'
+    discountCode: 'MONTH10'
   }
 ];

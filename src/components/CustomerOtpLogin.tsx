@@ -467,25 +467,11 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
                   />
                 ))}
               </div>
+              <p className="text-[11px] text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
+                <MessageCircle className="w-3 h-3 text-emerald-400" />
+                <span>सुरक्षा के लिए OTP केवल आपके WhatsApp चैट में भेजा गया है।</span>
+              </p>
             </div>
-
-            {/* Instant code fill helper */}
-            {generatedOtp && (
-              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex items-center justify-between text-xs">
-                <span className="text-slate-300 text-[11px]">तुरंत टेस्टिंग के लिए:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digitsArr = generatedOtp.split('').slice(0, 4);
-                    setOtpDigits(digitsArr);
-                  }}
-                  className="py-1 px-2.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-[11px] shadow cursor-pointer transition flex items-center gap-1"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>⚡ कोड भरें ({generatedOtp})</span>
-                </button>
-              </div>
-            )}
 
             {/* Submit & Resend Controls */}
             <div className="space-y-3 pt-1">

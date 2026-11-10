@@ -194,8 +194,8 @@ export async function dispatchRealOtpToPhone({
   // 2. Trigger browser/device push notification
   if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
     try {
-      new Notification('💬 Cavalli Club VIP OTP', {
-        body: `Your Cavalli Club Verification OTP is: ${otp}. Valid for 10 minutes.`,
+      new Notification('💬 Cavalli Club VIP WhatsApp OTP', {
+        body: `Cavalli Club वेरिफिकेशन OTP आपके WhatsApp पर भेज दिया गया है। कृपया अपना WhatsApp चेक करें।`,
         tag: 'cavalli-otp',
         requireInteraction: true
       });
@@ -270,8 +270,8 @@ export async function dispatchRealOtpToPhone({
     return {
       success: true, // Always allow user to proceed
       message: waApiSent
-        ? `🟢 Fast2SMS WhatsApp OTP dispatched to +91 ${tenDigit}!`
-        : `💬 WhatsApp OTP तैयार है! OTP: ${otp}`,
+        ? `🟢 Fast2SMS WhatsApp OTP +91 ${tenDigit} पर भेज दिया गया है!`
+        : `💬 WhatsApp OTP आपके नंबर (+91 ${tenDigit}) पर भेजा गया है। कृपया अपना WhatsApp चेक करें।`,
       channelUsed: 'Fast2SMS WhatsApp API',
       waUrl,
       otp,

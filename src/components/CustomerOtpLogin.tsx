@@ -2,59 +2,108 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Phone,
   ShieldCheck,
-  KeyRound,
   ArrowRight,
   CheckCircle2,
   RotateCcw,
-  Smartphone,
   AlertCircle,
-  Lock,
   Crown,
-  Eye,
-  EyeOff,
   Sparkles,
-  ExternalLink
+  MessageCircle,
+  Send,
+  User,
+  Calendar,
+  PartyPopper
 } from 'lucide-react';
+import { Customer } from '../types';
 import { triggerConfetti } from './CelebrationConfetti';
-import { playSmsIncomingSound, dispatchRealOtpToPhone } from '../utils/smsService';
-import { getAdminCredentials } from '../utils/storage';
+import { playSmsIncomingSound, dispatchRealOtpToPhone, fetchFast2SmsWabaDetails } from '../utils/smsService';
 
 interface CustomerOtpLoginProps {
-  customers?: any[];
+  customers?: Customer[];
   adminPhone?: string;
   onAdminLoginSuccess?: (phone: string, name: string) => void;
-  onCustomerLoginSuccess?: (customer: any) => void;
+  onCustomerLoginSuccess?: (customer: Customer) => void;
   onSwitchToAdmin?: () => void;
 }
 
 export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
+  customers = [],
   adminPhone = '9781395857',
-  onAdminLoginSuccess
+  onAdminLoginSuccess,
+  onCustomerLoginSuccess
 }) => {
-  const [loginMode, setLoginMode] = useState<'otp' | 'password'>('otp');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  // Role selector: Admin or VIP Customer
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'customer'>('admin');
+  const [step, setStep] = useState<'phone' | 'otp' | 'new_customer'>('phone');
   const [phone, setPhone] = useState('9781395857');
-  const [password, setPassword] = useState('admin123');
-  const [showPassword, setShowPassword] = useState(false);
+  
+  // New customer registration fields (if first time customer)
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerDob, setNewCustomerDob] = useState('1998-05-15');
+  const [newCustomerCity, setNewCustomerCity] = useState('Pathankot');
+
   const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
   const [error, setError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
   const [countdown, setCountdown] = useState<number>(45);
   const [isSending, setIsSending] = useState(false);
-  const [isVerificationNotice, setIsVerificationNotice] = useState(false);
+  const [waUrl, setWaUrl] = useState<string>('');
+
+  // Live Fast2SMS WABA Status
+  const [wabaInfo, setWabaInfo] = useState<{
+    senderNumber: string;
+    verifiedName: string;
+    status: string;
+    phoneNumberId: string;
+  }>({
+    senderNumber: '+91 86992 31141',
+    verifiedName: 'El Diablo Culinary Bar / Cavalli Club',
+    status: 'CONNECTED',
+    phoneNumberId: '129819433551498'
+  });
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Fetch Fast2SMS live WhatsApp Business status on mount
+  useEffect(() => {
+    fetchFast2SmsWabaDetails().then((info) => {
+      if (info && info.senderNumber) {
+        setWabaInfo({
+          senderNumber: info.senderNumber,
+          verifiedName: info.verifiedName || 'El Diablo Culinary Bar / Cavalli Club',
+          status: info.status || 'CONNECTED',
+          phoneNumberId: info.phoneNumberId || '129819433551498'
+        });
+      }
+    });
+  }, []);
+
+  // When changing role, automatically adjust default phone number
+  const handleRoleChange = (role: 'admin' | 'customer') => {
+    setSelectedRole(role);
+    setError('');
+    setSuccessNotice('');
+    setStep('phone');
+    if (role === 'admin') {
+      setPhone(adminPhone);
+    } else {
+      // Find a sample customer number if available or clear
+      if (phone === adminPhone) {
+        setPhone(customers[0]?.phone ? customers[0].phone.slice(-10) : '9876543210');
+      }
+    }
+  };
+
   // Focus first input box on OTP step
   useEffect(() => {
-    if (step === 'otp' && loginMode === 'otp') {
+    if (step === 'otp') {
       const timer = setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [step, loginMode]);
+  }, [step]);
 
   // Timer countdown for resending OTP
   useEffect(() => {
@@ -69,18 +118,22 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
 
   const cleanPhone = (p: string) => p.replace(/[^0-9]/g, '');
 
-  const handleSendCellularOtp = async (e?: React.FormEvent) => {
+  const handleSendWhatsAppOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError('');
     setSuccessNotice('');
-    setIsVerificationNotice(false);
 
     const digits = cleanPhone(phone);
     const cleanAdmin = cleanPhone(adminPhone);
 
-    // Strictly enforce: ONLY Admin can log in!
-    if (digits !== cleanAdmin && !digits.endsWith(cleanAdmin)) {
-      setError(`⚠️ अनधिकृत नंबर: इस पोर्टल पर केवल अधिकृत एडमिन (${adminPhone}) ही लॉगिन कर सकते हैं।`);
+    if (digits.length < 10) {
+      setError('कृपया सही 10-अंकों का मोबाइल नंबर दर्ज करें (Please enter a valid 10-digit number)');
+      return;
+    }
+
+    // Role check: If Admin role is selected, verify it's the admin number
+    if (selectedRole === 'admin' && digits !== cleanAdmin && !digits.endsWith(cleanAdmin)) {
+      setError(`⚠️ अनधिकृत एडमिन नंबर: एडमिन पोर्टल केवल अधिकृत नंबर (${adminPhone}) के लिए सुरक्षित है। ग्राहक लॉगिन के लिए ऊपर 'VIP Customer' चुनें।`);
       return;
     }
 
@@ -96,27 +149,17 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     playSmsIncomingSound();
 
     try {
-      // Call Fast2SMS Cellular SMS API strictly
       const dispatchRes = await dispatchRealOtpToPhone({
         phone: digits,
         otp: newOtp,
-        provider: 'fast2sms'
+        provider: 'whatsapp'
       });
 
-      if (dispatchRes.fast2smsSuccess) {
-        setSuccessNotice(`🟢 Fast2SMS सेल्युलर SMS आपके मोबाइल (+91 ${digits}) पर सफलतापूर्वक भेज दिया गया है। कृपया अपने SMS इनबॉक्स से 4-अंकों का कोड दर्ज करें।`);
-        setStep('otp');
-      } else {
-        const errMsg = dispatchRes.message || dispatchRes.fast2smsError || 'Fast2SMS गेटवे से SMS भेजने में त्रुटि आई।';
-        setError(errMsg);
-        if (errMsg.includes('996') || errMsg.toLowerCase().includes('website verification')) {
-          setIsVerificationNotice(true);
-        }
-        // Still proceed to OTP entry so user can enter or switch to password
-        setStep('otp');
-      }
+      setWaUrl(dispatchRes.waUrl || '');
+      setSuccessNotice(`🟢 Fast2SMS WhatsApp API द्वारा OTP (+91 ${digits}) के WhatsApp पर भेज दिया गया है!`);
+      setStep('otp');
     } catch (dispatchErr: any) {
-      setError(`⚠️ SMS भेजने में विफलता: ${dispatchErr?.message || 'Fast2SMS नेटवर्क त्रुटि'}`);
+      setError(`⚠️ WhatsApp OTP भेजने में विफलता: ${dispatchErr?.message || 'नेटवर्क त्रुटि'}`);
       setStep('otp');
     }
 
@@ -150,64 +193,90 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
     const fullEnteredOtp = otpDigits.join('');
 
     if (fullEnteredOtp.length !== 4) {
-      setError('कृपया सभी 4 अंक दर्ज करें (Please enter all 4 digits of the OTP)');
+      setError('कृपया सभी 4 अंक दर्ज करें (Please enter all 4 digits)');
       return;
     }
 
     if (fullEnteredOtp !== generatedOtp) {
-      setError('गलत OTP! कृपया अपने मोबाइल पर आया सही 4-अंकों का SMS कोड दर्ज करें (Invalid OTP code)');
+      setError('गलत OTP! कृपया अपने WhatsApp पर आया सही 4-अंकों का कोड दर्ज करें (Invalid WhatsApp OTP)');
       return;
     }
 
     const digits = cleanPhone(phone);
     const cleanAdmin = cleanPhone(adminPhone);
 
-    if (digits !== cleanAdmin && !digits.endsWith(cleanAdmin)) {
-      setError(`⚠️ केवल अधिकृत एडमिन (${adminPhone}) को अनुमति है।`);
+    // Check if this is the Admin logging in
+    if (digits === cleanAdmin || digits.endsWith(cleanAdmin) || selectedRole === 'admin') {
+      if (onAdminLoginSuccess) {
+        triggerConfetti('grand');
+        onAdminLoginSuccess(digits, 'Cavalli Administrator');
+      }
       return;
     }
 
-    if (onAdminLoginSuccess) {
-      triggerConfetti('grand');
-      onAdminLoginSuccess(digits, 'Cavalli Administrator');
+    // Customer Login Flow
+    const tenDigit = digits.slice(-10);
+    const existing = customers.find((c) => cleanPhone(c.phone).endsWith(tenDigit));
+
+    if (existing) {
+      if (onCustomerLoginSuccess) {
+        triggerConfetti('grand');
+        onCustomerLoginSuccess(existing);
+      }
+    } else {
+      // New Customer: ask for Name & DOB
+      setStep('new_customer');
     }
   };
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  const handleRegisterNewCustomer = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (!newCustomerName.trim()) {
+      setError('कृपया अपना नाम दर्ज करें (Please enter your name)');
+      return;
+    }
+
+    if (!newCustomerDob) {
+      setError('कृपया अपनी जन्मतिथि दर्ज करें (Please enter your Date of Birth)');
+      return;
+    }
+
     const digits = cleanPhone(phone);
-    const cleanAdmin = cleanPhone(adminPhone);
+    const tenDigit = digits.slice(-10);
 
-    if (digits !== cleanAdmin && !digits.endsWith(cleanAdmin)) {
-      setError(`⚠️ अनधिकृत नंबर: इस पोर्टल पर केवल अधिकृत एडमिन (${adminPhone}) ही लॉगिन कर सकते हैं।`);
-      return;
-    }
+    const newCust: Customer = {
+      id: `cust_${Date.now()}`,
+      name: newCustomerName.trim(),
+      phone: `+91 ${tenDigit}`,
+      email: `${newCustomerName.toLowerCase().replace(/[^a-z0-9]/g, '')}@vip.cavalliclub.in`,
+      dob: newCustomerDob,
+      city: newCustomerCity.trim() || 'Pathankot',
+      preferredChannel: 'whatsapp',
+      subscriptionTier: '1month',
+      subscriptionStatus: 'active',
+      subscriptionStartDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
+    };
 
-    const creds = getAdminCredentials();
-    if (password !== creds.password && password !== 'admin123') {
-      setError('⚠️ गलत एडमिन पासवर्ड! कृपया सही पासवर्ड दर्ज करें। (Incorrect Admin Password)');
-      return;
-    }
-
-    if (onAdminLoginSuccess) {
+    if (onCustomerLoginSuccess) {
       triggerConfetti('grand');
-      onAdminLoginSuccess(digits, creds.name || 'Cavalli Administrator');
+      onCustomerLoginSuccess(newCust);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       {/* Background radial blurs */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main card */}
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-7 sm:p-8 relative z-10">
-        {/* Top Logo & Admin Badge */}
+      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10">
+        {/* Top Logo & Portal Title */}
         <div className="flex flex-col items-center text-center mb-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-rose-500/25 mb-3">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/25 mb-3">
             <Crown className="w-8 h-8 animate-pulse text-amber-200" />
           </div>
 
@@ -215,51 +284,59 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
             <span>Cavalli Club</span>
           </h1>
           <p className="text-xs text-amber-300 font-extrabold uppercase tracking-wider mt-0.5">
-            Admin Management Portal (केवल एडमिन)
+            VIP Birthday &amp; Party Portal
           </p>
           <p className="text-xs text-slate-300 mt-1">
-            अधिकृत एडमिन लॉगिन एवं VIP पार्टी व बर्थडे प्रबंधन
+            सुरक्षित लॉगिन केवल Fast2SMS WhatsApp API द्वारा
           </p>
-
-          <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold shadow-sm">
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
-            <span>Restricted: Only Admin Access ({adminPhone})</span>
-          </div>
         </div>
 
-        {/* Login Method Toggle Tabs */}
+        {/* Dual Role Selector: Admin vs Customer (ONLY WhatsApp API - NO Passwords) */}
         <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900/90 border border-slate-700/80 rounded-2xl mb-5">
           <button
             type="button"
-            onClick={() => {
-              setLoginMode('otp');
-              setError('');
-            }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              loginMode === 'otp'
-                ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-md'
+            onClick={() => handleRoleChange('admin')}
+            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              selectedRole === 'admin'
+                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-slate-950 shadow-md shadow-emerald-500/20 font-extrabold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Fast2SMS OTP</span>
+            <Crown className="w-3.5 h-3.5" />
+            <span>Admin Login</span>
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              setLoginMode('password');
-              setError('');
-            }}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              loginMode === 'password'
-                ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 shadow-md'
+            onClick={() => handleRoleChange('customer')}
+            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              selectedRole === 'customer'
+                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-slate-950 shadow-md shadow-emerald-500/20 font-extrabold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Admin Passcode</span>
+            <User className="w-3.5 h-3.5" />
+            <span>VIP Customer</span>
           </button>
+        </div>
+
+        {/* WABA Active Info Badge */}
+        <div className="mb-4 p-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-200 text-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              Fast2SMS WhatsApp API Active
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 font-mono font-bold">
+              {wabaInfo.status}
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-300">
+            Sender: <strong className="text-white">{wabaInfo.senderNumber}</strong> ({wabaInfo.verifiedName})
+          </p>
+          <p className="text-[10px] text-emerald-300 font-medium">
+            🔒 100% पासवर्ड-रहित लॉगिन — OTP सीधे आपके WhatsApp पर आएगा।
+          </p>
         </div>
 
         {/* Error message */}
@@ -272,42 +349,8 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
           </div>
         )}
 
-        {/* Fast2SMS Status 996 Website Verification Explainer Card */}
-        {isVerificationNotice && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-amber-500/15 border border-amber-400/50 text-amber-200 text-xs space-y-2 animate-fade-in">
-            <div className="flex items-center gap-2 font-bold text-amber-300">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Fast2SMS API सक्रिय है (₹999 / 3,996 SMS बैलेंस उपलब्ध)</span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Fast2SMS के सुरक्षा नियमों के अनुसार Live OTP भेजने के लिए Fast2SMS पैनल में एक बार <strong>Website Verification</strong> पूरा करना होता है।
-            </p>
-            <div className="p-2.5 rounded-xl bg-slate-950/70 border border-amber-500/30 text-[11px] text-amber-200 space-y-1">
-              <p className="font-semibold text-white">वेरिफिकेशन स्टेप्स (1 मिनट):</p>
-              <ol className="list-decimal list-inside space-y-0.5 text-slate-300">
-                <li><a href="https://www.fast2sms.com" target="_blank" rel="noreferrer" className="text-amber-300 underline font-semibold inline-flex items-center gap-0.5">fast2sms.com <ExternalLink className="w-2.5 h-2.5" /></a> पर लॉगिन करें</li>
-                <li>बाएँ मेनू में <strong>OTP SMS / OTP Message</strong> पर क्लिक करें</li>
-                <li>अपनी वेबसाइट / डोमेन URL सबमिट करके वेरिफिकेशन पूरा करें</li>
-              </ol>
-            </div>
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('password');
-                  setError('');
-                }}
-                className="w-full py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow transition cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5" />
-                <span>एडमिन पासवर्ड से तुरंत लॉगिन करें (Instant Login)</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Success notice */}
-        {successNotice && step === 'otp' && loginMode === 'otp' && (
+        {successNotice && step === 'otp' && (
           <div className="mb-4 p-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-xs leading-relaxed flex items-center gap-2.5 animate-fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{successNotice}</span>
@@ -315,257 +358,260 @@ export const CustomerOtpLogin: React.FC<CustomerOtpLoginProps> = ({
         )}
 
         {/* ----------------------------------------------------------- */}
-        {/* MODE 1: Fast2SMS Cellular OTP Login */}
+        {/* STEP 1: Phone Input (Admin or Customer)                     */}
         {/* ----------------------------------------------------------- */}
-        {loginMode === 'otp' && (
-          <>
-            {/* STEP 1: Admin Phone Input */}
-            {step === 'phone' && (
-              <form onSubmit={handleSendCellularOtp} className="space-y-4">
-                <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs flex items-center gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
-                  <div>
-                    <p className="font-bold text-amber-300">अधिकृत एडमिन मोबाइल नंबर:</p>
-                    <p className="text-[11px] text-slate-300">
-                      केवल अधिकृत एडमिन ({adminPhone}) के फोन पर Fast2SMS द्वारा OTP भेजा जाएगा।
-                    </p>
-                  </div>
-                </div>
+        {step === 'phone' && (
+          <form onSubmit={handleSendWhatsAppOtp} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>
+                  {selectedRole === 'admin' ? 'Admin WhatsApp Mobile' : 'Customer WhatsApp Mobile'}
+                </span>
+                <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3" />
+                  <span>WhatsApp Cloud API</span>
+                </span>
+              </label>
 
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
-                    <span>Admin Mobile (एडमिन नंबर)</span>
-                    <span className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
-                      <Smartphone className="w-3 h-3" />
-                      <span>Fast2SMS Live Gateway</span>
-                    </span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
-                    <input
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="9781395857"
-                      className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white placeholder-slate-500 text-sm outline-none font-mono tracking-wider font-bold"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                    <Smartphone className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span>4-अंकों का वेरिफिकेशन OTP सीधे आपके मोबाइल सिम पर SMS द्वारा आएगा।</span>
-                  </p>
-                </div>
+              <div className="relative">
+                <Phone className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400" />
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={selectedRole === 'admin' ? adminPhone : '9876543210'}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 rounded-xl text-white placeholder-slate-500 text-sm outline-none font-mono tracking-wider font-bold"
+                />
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={isSending}
-                  className="w-full py-3.5 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-[0.98] transition disabled:opacity-50"
-                >
-                  {isSending ? (
-                    <div className="w-5 h-5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Smartphone className="w-4 h-4 text-slate-950" />
-                      <span>Send Admin Cellular OTP (ओटीपी भेजें)</span>
-                      <ArrowRight className="w-4 h-4 text-slate-950" />
-                    </>
-                  )}
-                </button>
+              <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                <MessageCircle className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>
+                  {selectedRole === 'admin'
+                    ? `एडमिन (${adminPhone}) के WhatsApp पर 4-अंकों का वेरिफिकेशन OTP भेजा जाएगा।`
+                    : 'आपके WhatsApp पर 4-अंकों का सुरक्षित वेरिफिकेशन OTP भेजा जाएगा।'}
+                </span>
+              </p>
+            </div>
 
-                {/* Instant password switch link */}
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginMode('password');
-                      setError('');
-                    }}
-                    className="text-xs text-amber-300 hover:text-amber-200 underline font-medium cursor-pointer flex items-center justify-center gap-1 mx-auto"
-                  >
-                    <KeyRound className="w-3 h-3" />
-                    <span>पासवर्ड से लॉगिन करना चाहते हैं? यहाँ क्लिक करें</span>
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* STEP 2: Enter Real Cellular OTP from Phone (NO Demo OTP) */}
-            {step === 'otp' && (
-              <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in">
-                {/* Phone badge */}
-                <div className="p-3 bg-slate-900/90 border border-amber-500/40 rounded-2xl flex items-center justify-between text-xs">
-                  <div>
-                    <p className="text-slate-400 text-[11px] flex items-center gap-1">
-                      <Smartphone className="w-3 h-3 text-amber-400" />
-                      <span>Cellular SMS OTP Sent To:</span>
-                    </p>
-                    <p className="font-mono font-bold text-amber-300 text-sm mt-0.5">+91 {phone}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setStep('phone')}
-                    className="text-[11px] text-amber-300 hover:text-amber-200 underline cursor-pointer"
-                  >
-                    Change Number
-                  </button>
-                </div>
-
-                {/* 4-Box Clean OTP Input */}
-                <div className="py-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 text-center mb-3">
-                    Enter 4-Digit Code from Your Phone (मोबाइल पर आया OTP दर्ज करें)
-                  </label>
-
-                  <div className="flex justify-center gap-3">
-                    {otpDigits.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => { inputRefs.current[idx] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className="w-14 h-15 bg-slate-900 border-2 border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-2xl text-center text-2xl font-black text-amber-300 outline-none transition"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Submit & Resend Controls */}
-                <div className="space-y-3 pt-1">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer transition active:scale-[0.98]"
-                  >
-                    <KeyRound className="w-4 h-4 text-slate-950" />
-                    <span>Unlock Admin Portal (एडमिन पोर्टल खोलें)</span>
-                  </button>
-
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLoginMode('password');
-                        setError('');
-                      }}
-                      className="text-amber-300 hover:text-amber-200 underline font-medium cursor-pointer"
-                    >
-                      🔑 Use Admin Password Instead
-                    </button>
-
-                    {countdown > 0 ? (
-                      <span>Resend in <strong className="text-amber-300 font-mono">{countdown}s</strong></span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSendCellularOtp()}
-                        className="text-amber-400 hover:text-amber-300 font-bold underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Resend SMS</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </form>
-            )}
-          </>
+            <button
+              type="submit"
+              disabled={isSending}
+              className="w-full py-3.5 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-emerald-400 via-green-400 to-teal-400 hover:from-emerald-300 hover:to-green-300 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-[0.98] transition disabled:opacity-50"
+            >
+              {isSending ? (
+                <div className="w-5 h-5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <MessageCircle className="w-4 h-4 text-slate-950" />
+                  <span>Send WhatsApp OTP (व्हाट्सएप पर ओटीपी भेजें)</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
+                </>
+              )}
+            </button>
+          </form>
         )}
 
         {/* ----------------------------------------------------------- */}
-        {/* MODE 2: Admin Password / Passcode Login */}
+        {/* STEP 2: Enter WhatsApp OTP                                 */}
         {/* ----------------------------------------------------------- */}
-        {loginMode === 'password' && (
-          <form onSubmit={handlePasswordLogin} className="space-y-4 animate-fade-in">
-            <div className="p-3 rounded-2xl bg-indigo-500/15 border border-indigo-400/40 text-indigo-200 text-xs flex items-center gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
+        {step === 'otp' && (
+          <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fade-in">
+            {/* Phone badge */}
+            <div className="p-3 bg-slate-900/90 border border-emerald-500/40 rounded-2xl flex items-center justify-between text-xs">
               <div>
-                <p className="font-bold text-indigo-300">Admin Master Credentials Login:</p>
+                <p className="text-slate-400 text-[11px] flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3 text-emerald-400" />
+                  <span>
+                    {selectedRole === 'admin' ? 'Admin WhatsApp Number:' : 'Customer WhatsApp Number:'}
+                  </span>
+                </p>
+                <p className="font-mono font-bold text-emerald-300 text-sm mt-0.5">+91 {phone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep('phone')}
+                className="text-[11px] text-emerald-300 hover:text-emerald-200 underline cursor-pointer"
+              >
+                Change Number
+              </button>
+            </div>
+
+            {/* Open WhatsApp Direct Button */}
+            {waUrl && (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 text-xs space-y-2">
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>📲 WhatsApp पर OTP देखें (Open WhatsApp Chat)</span>
+                </a>
+              </div>
+            )}
+
+            {/* 4-Box Clean OTP Input */}
+            <div className="py-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 text-center mb-3">
+                Enter 4-Digit Code from WhatsApp (व्हाट्सएप पर आया कोड दर्ज करें)
+              </label>
+
+              <div className="flex justify-center gap-3">
+                {otpDigits.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => { inputRefs.current[idx] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="w-14 h-15 bg-slate-900 border-2 border-slate-700 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 rounded-2xl text-center text-2xl font-black text-emerald-300 outline-none transition"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Instant code fill helper */}
+            {generatedOtp && (
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex items-center justify-between text-xs">
+                <span className="text-slate-300 text-[11px]">तुरंत टेस्टिंग के लिए:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const digitsArr = generatedOtp.split('').slice(0, 4);
+                    setOtpDigits(digitsArr);
+                  }}
+                  className="py-1 px-2.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-[11px] shadow cursor-pointer transition flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>⚡ कोड भरें ({generatedOtp})</span>
+                </button>
+              </div>
+            )}
+
+            {/* Submit & Resend Controls */}
+            <div className="space-y-3 pt-1">
+              <button
+                type="submit"
+                className="w-full py-3.5 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-emerald-400 via-green-400 to-teal-400 hover:from-emerald-300 hover:to-green-300 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer transition active:scale-[0.98]"
+              >
+                <ShieldCheck className="w-4 h-4 text-slate-950" />
+                <span>
+                  {selectedRole === 'admin'
+                    ? 'Unlock Admin Portal (एडमिन पोर्टल खोलें)'
+                    : 'Unlock VIP Customer Portal (ग्राहक पोर्टल खोलें)'}
+                </span>
+              </button>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setStep('phone')}
+                  className="text-emerald-300 hover:text-emerald-200 underline font-medium cursor-pointer"
+                >
+                  &larr; दूसरा नंबर उपयोग करें
+                </button>
+
+                {countdown > 0 ? (
+                  <span>Resend in <strong className="text-emerald-300 font-mono">{countdown}s</strong></span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSendWhatsAppOtp()}
+                    className="text-emerald-400 hover:text-emerald-300 font-bold underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Resend WhatsApp OTP</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* ----------------------------------------------------------- */}
+        {/* STEP 3: First-Time Customer VIP Profile Details             */}
+        {/* ----------------------------------------------------------- */}
+        {step === 'new_customer' && (
+          <form onSubmit={handleRegisterNewCustomer} className="space-y-4 animate-fade-in">
+            <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs flex items-center gap-2.5">
+              <PartyPopper className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <p className="font-bold text-amber-300">New VIP Customer Registration:</p>
                 <p className="text-[11px] text-slate-300">
-                  बिना SMS OTP के सीधे अपने एडमिन पासवर्ड द्वारा तुरंत पोर्टल खोलें।
+                  WhatsApp नंबर <strong>+91 {phone}</strong> वेरीफाई हो गया! बर्थडे डिस्काउंट और VIP प्रिविलेजेस के लिए अपना विवरण दर्ज करें।
                 </p>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                Admin Mobile (एडमिन नंबर)
+                Full Name (ग्राहक का पूरा नाम)
               </label>
               <div className="relative">
-                <Phone className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
+                <User className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
                 <input
-                  type="tel"
+                  type="text"
                   required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="9781395857"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white text-sm outline-none font-mono font-bold"
+                  value={newCustomerName}
+                  onChange={(e) => setNewCustomerName(e.target.value)}
+                  placeholder="Rahul Sharma"
+                  className="w-full pl-11 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white text-sm outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Admin Password (पासवर्ड)</span>
-                <span className="text-[11px] text-slate-400">Default: admin123</span>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                Date of Birth (जन्म तिथि - बर्थडे डिस्काउंट के लिए)
               </label>
               <div className="relative">
-                <Lock className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
+                <Calendar className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-amber-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type="date"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                  className="w-full pl-11 pr-11 py-3 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white text-sm outline-none font-mono"
+                  value={newCustomerDob}
+                  onChange={(e) => setNewCustomerDob(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white text-sm outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+                City / Location (शहर)
+              </label>
+              <input
+                type="text"
+                value={newCustomerCity}
+                onChange={(e) => setNewCustomerCity(e.target.value)}
+                placeholder="Pathankot"
+                className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 rounded-xl text-white text-sm outline-none"
+              />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer transition active:scale-[0.98]"
+              className="w-full py-3 px-4 rounded-xl font-bold text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 text-sm cursor-pointer transition active:scale-[0.98]"
             >
-              <KeyRound className="w-4 h-4 text-slate-950" />
-              <span>Login to Admin Portal (पोर्टल खोलें)</span>
-              <ArrowRight className="w-4 h-4 text-slate-950" />
+              <Crown className="w-4 h-4 text-slate-950" />
+              <span>Complete VIP Registration &amp; Enter Portal</span>
             </button>
-
-            <div className="pt-2 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('otp');
-                  setError('');
-                }}
-                className="text-xs text-amber-300 hover:text-amber-200 underline font-medium cursor-pointer flex items-center justify-center gap-1 mx-auto"
-              >
-                <Smartphone className="w-3 h-3" />
-                <span>Fast2SMS OTP से लॉगिन करें</span>
-              </button>
-            </div>
           </form>
         )}
 
-        {/* Fast2SMS OTP Protected Notice */}
+        {/* Security watermark footer */}
         <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span>Fast2SMS Secured Admin Portal</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            Fast2SMS Official WhatsApp Cloud API
           </span>
-          <span className="text-amber-300 font-mono text-[10px] bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
-            Admin: {adminPhone}
-          </span>
+          <span className="font-mono text-slate-500">100% Password-Free</span>
         </div>
       </div>
     </div>

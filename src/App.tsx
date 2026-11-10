@@ -637,12 +637,31 @@ export default function App() {
     );
   }
 
-  // 2. FRONT PAGE: Fast2SMS Cellular OTP Login Exclusively for Admin (9781395857)
+  // 2. If Customer is authenticated -> Render Customer VIP Portal
+  if (loggedInCustomer) {
+    return (
+      <CustomerPortal
+        customer={loggedInCustomer}
+        onUpdateSubscriptionRequest={handleCustomerUpdateSubscription}
+        onLogout={handleCustomerLogout}
+        onSwitchToAdmin={() => {
+          setLoggedInCustomer(null);
+          setPortalMode('admin');
+        }}
+      />
+    );
+  }
+
+  // 3. FRONT PAGE: Unified Fast2SMS WhatsApp Cloud API Login for Admin & Customer (NO Passwords)
   return (
     <CustomerOtpLogin
       adminPhone="9781395857"
+      customers={customers}
       onAdminLoginSuccess={(phoneOrEmail, name) => {
         handleAdminLoginSuccess(phoneOrEmail, name);
+      }}
+      onCustomerLoginSuccess={(customer) => {
+        handleCustomerLoginSuccess(customer);
       }}
     />
   );

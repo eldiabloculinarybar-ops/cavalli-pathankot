@@ -47,6 +47,60 @@ app.post('/api/fast2sms/send-otp', async (req, res) => {
   }
 });
 
+// Fast2SMS Official WhatsApp Business API Proxy
+app.post('/api/fast2sms/send-whatsapp-otp', async (req, res) => {
+  try {
+    const { apiKey, numbers, otp, messageId, phoneNumberId } = req.body || {};
+    const effectiveKey = (apiKey && apiKey !== 'YOUR_FAST2SMS_API_KEY') ? apiKey : (process.env.FAST2SMS_API_KEY || DEFAULT_FAST2SMS_KEY);
+    const effectivePhoneId = phoneNumberId || '129819433551498';
+    const effectiveMsgId = messageId || '43436';
+    const cleanNumbers = String(numbers || '').replace(/[^0-9]/g, '').slice(-10);
+
+    if (!cleanNumbers || !otp) {
+      return res.status(400).json({
+        return: false,
+        message: 'Missing required fields: numbers, otp'
+      });
+    }
+
+    // Try Fast2SMS WhatsApp Template API
+    const fast2smsUrl = `https://www.fast2sms.com/dev/whatsapp?message_id=${effectiveMsgId}&phone_number_id=${effectivePhoneId}&numbers=${cleanNumbers}&variables_values=${otp}`;
+    const response = await fetch(fast2smsUrl, {
+      method: 'GET',
+      headers: {
+        authorization: effectiveKey
+      }
+    });
+
+    const data = await response.json();
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({
+      return: false,
+      message: err?.message || 'Fast2SMS WhatsApp API dispatch error'
+    });
+  }
+});
+
+// Get Fast2SMS WABA Status and Templates
+app.get('/api/fast2sms/whatsapp-details', async (req, res) => {
+  try {
+    const apiKey = (req.query.apiKey && typeof req.query.apiKey === 'string') ? req.query.apiKey : (process.env.FAST2SMS_API_KEY || DEFAULT_FAST2SMS_KEY);
+    const response = await fetch('https://www.fast2sms.com/dev/dlt_manager/whatsapp?type=template&phone_number_id=129819433551498', {
+      headers: {
+        authorization: apiKey
+      }
+    });
+    const data = await response.json();
+    return res.json(data);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to fetch Fast2SMS WABA details'
+    });
+  }
+});
+
 // Serve static assets from 'dist' folder or current directory
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));

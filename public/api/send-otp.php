@@ -60,29 +60,54 @@ if (strlen($cleanPhone) > 10) {
     $cleanPhone = substr($cleanPhone, -10);
 }
 
-// Send request to Fast2SMS Bulk V2 API via cURL
-$ch = curl_init('https://www.fast2sms.com/dev/bulkV2');
+$type = strtolower(trim($data['type'] ?? 'whatsapp'));
+$messageId = trim($data['messageId'] ?? '43436');
+$phoneNumberId = trim($data['phoneNumberId'] ?? '129819433551498');
 
-$payload = json_encode([
-    'route' => 'otp',
-    'variables_values' => (string)$otp,
-    'numbers' => (string)$cleanPhone
-]);
+if ($type === 'whatsapp') {
+    // Fast2SMS WhatsApp Business API
+    $waUrl = 'https://www.fast2sms.com/dev/whatsapp?message_id=' . urlencode($messageId) .
+             '&phone_number_id=' . urlencode($phoneNumberId) .
+             '&numbers=' . urlencode($cleanPhone) .
+             '&variables_values=' . urlencode((string)$otp);
 
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'authorization: ' . $apiKey,
-    'Content-Type: application/json'
-]);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    $ch = curl_init($waUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'authorization: ' . $apiKey
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
-curl_close($ch);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+} else {
+    // Send request to Fast2SMS Bulk V2 API via cURL
+    $ch = curl_init('https://www.fast2sms.com/dev/bulkV2');
+
+    $payload = json_encode([
+        'route' => 'otp',
+        'variables_values' => (string)$otp,
+        'numbers' => (string)$cleanPhone
+    ]);
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'authorization: ' . $apiKey,
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+}
 
 if ($response === false) {
     http_response_code(502);
